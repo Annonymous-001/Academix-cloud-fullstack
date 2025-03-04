@@ -75,7 +75,7 @@ const LessonForm = ({
             {...register("day")}
             defaultValue={data?.day}
           >
-            {["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"].map((day) => (
+            {["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY","SATURDAY"].map((day) => (
               <option value={day} key={day}>
                 {day}
               </option>
