@@ -127,7 +127,7 @@ const ParentForm = ({
           error={errors.address}
         />
         <InputField
-          label="Student IDs (comma separated)"
+          label="Student IDs(Optional)"
           name="studentId"
           defaultValue={type === "update" ? existingStudentIds : ""}
           register={register}
