@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import BigCalendar from "./BigCalender";
 import { adjustScheduleToCurrentWeek } from "@/lib/utils";
+import moment from "moment-timezone"; 
 
 const BigCalendarContainer = async ({
   type,
@@ -17,10 +18,11 @@ const BigCalendarContainer = async ({
     },
   });
 
+ 
   const data = dataRes.map((lesson) => ({
     title: lesson.name,
-    start: lesson.startTime,
-    end: lesson.endTime,
+    start: moment.utc(lesson.startTime).local().toDate(), // Convert UTC to local
+    end: moment.utc(lesson.endTime).local().toDate(),
   }));
 
   const schedule = adjustScheduleToCurrentWeek(data);
