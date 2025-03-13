@@ -172,3 +172,40 @@ export const parentSchema = z.object({
 });
 
 export type ParentSchema = z.infer<typeof parentSchema>;
+
+export const accountantSchema = z.object({
+  id: z.string().optional(),
+  username: z.string().min(1, { message: "Username is required!" }),
+  name: z.string().min(1, { message: "First name is required!" }),
+  surname: z.string().min(1, { message: "Last name is required!" }),
+  email: z.string().email({ message: "Invalid email format!" }).optional().nullable(),
+  phone: z.string().optional(),
+  address: z.string().min(1, { message: "Address is required!" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters!" }).optional(),
+});
+
+export type AccountantSchema = z.infer<typeof accountantSchema>;
+
+export const feeSchema = z.object({
+  id: z.coerce.number().optional(),
+  studentId: z.string().min(1, "Student is required"),
+  totalAmount: z.coerce.number().min(0.01, "Amount must be greater than 0"),
+  paidAmount: z.coerce.number().min(0).default(0),
+  dueDate: z.coerce.date({ required_error: "Due date is required" }),
+  status: z.enum(["PAID", "UNPAID", "PARTIAL", "OVERDUE", "WAIVED"])
+});
+
+export type FeeSchema = z.infer<typeof feeSchema>;
+
+export const paymentSchema = z.object({
+  id: z.coerce.number().optional(),
+  feeId: z.coerce.number().min(1, "Fee selection is required"),
+  amount: z.coerce.number().min(0.01, "Amount must be greater than 0"),
+  method: z.enum(["CASH", "CARD", "BANK_TRANSFER"], {
+    required_error: "Payment method is required"
+  }),
+  paymentDate: z.coerce.date({ required_error: "Payment date is required" }),
+  reference: z.string().optional()
+});
+
+export type PaymentSchema = z.infer<typeof paymentSchema>;

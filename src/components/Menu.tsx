@@ -31,6 +31,18 @@ const menuItems = [
         visible: ["admin", "teacher"],
       },
       {
+        icon: "/badge-indian-rupee1.png",
+        label: "Fees",
+        href: "/list/fees",
+        visible: ["admin", "teacher", "student", "parent"],
+      },
+      {
+        icon: "/attendance.png",
+        label: "Attendance",
+        href: "/list/attendence",
+        visible: ["admin", "teacher", "student", "parent"],
+      },
+      {
         icon: "/subject.png",
         label: "Subjects",
         href: "/list/subjects",
@@ -66,18 +78,14 @@ const menuItems = [
         href: "/list/results",
         visible: ["admin", "teacher", "student", "parent"],
       },
-      // {
-      //   icon: "/attendance.png",
-      //   label: "Attendance",
-      //   href: "/list/attendance",
-      //   visible: ["admin", "teacher", "student", "parent"],
-      // },
+   
       {
         icon: "/calendar.png",
         label: "Events",
         href: "/list/events",
         visible: ["admin", "teacher", "student", "parent"],
       },
+
       // {
       //   icon: "/message.png",
       //   label: "Messages",

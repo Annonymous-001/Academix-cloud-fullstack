@@ -13,6 +13,9 @@ import {
   EventSchema,
   AnnouncementSchema,
   ParentSchema,
+  AccountantSchema,
+  FeeSchema,
+  PaymentSchema,
 } from "./formValidationSchemas";
 import prisma from "./prisma";
 import { clerkClient } from "@clerk/nextjs/server";
@@ -1044,6 +1047,165 @@ export const deleteParent = async (
     return { success: true, error: false };
   } catch (err) {
     console.error("Error in deleteParent:", err);
+    return { success: false, error: true };
+  }
+};
+
+export const createAccountant = async (
+  currentState: CurrentState,
+  data: AccountantSchema
+) => {
+  try {
+    console.log("Creating accountant...");
+    
+    // Create Clerk user
+    const user = await clerk.users.createUser({
+      emailAddress: data.email ? [data.email] : [],
+      username: data.username,
+      password: data.password,
+      firstName: data.name,
+      lastName: data.surname,
+      publicMetadata: { role: "accountant" },
+    });
+
+    // Create database record
+    await prisma.accountant.create({
+      data: {
+        id: user.id,
+        username: data.username,
+        name: data.name,
+        surname: data.surname,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        createdAt: new Date(),
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Error creating accountant:", err);
+    return { success: false, error: true, message: err.message };
+  }
+};
+
+export const updateAccountant = async (
+  currentState: CurrentState,
+  data: AccountantSchema
+) => {
+  if (!data.id) return { success: false, error: true };
+
+  try {
+    console.log("Updating accountant...");
+    
+    // Update Clerk user
+    await clerk.users.updateUser(data.id, {
+      username: data.username,
+      firstName: data.name,
+      lastName: data.surname,
+      ...(data.password && { password: data.password }),
+    });
+
+    // Update database record
+    await prisma.accountant.update({
+      where: { id: data.id },
+      data: {
+        username: data.username,
+        name: data.name,
+        surname: data.surname,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Error updating accountant:", err);
+    return { success: false, error: true, message: err.message };
+  }
+};
+
+export const deleteAccountant = async (
+  currentState: CurrentState,
+  data: FormData
+) => {
+  const id = data.get("id") as string;
+  try {
+    console.log("Deleting accountant...");
+    
+    // Delete database record
+    await prisma.accountant.delete({
+      where: { id },
+    });
+
+    // Delete Clerk user
+    await clerk.users.deleteUser(id);
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Error deleting accountant:", err);
+    return { success: false, error: true, message: err.message };
+  }
+};
+
+export const createFee = async (
+  currentState: CurrentState,
+  data: FeeSchema
+) => {
+  try {
+    await prisma.fee.create({
+      data: {
+        studentId: data.studentId,
+        totalAmount: data.totalAmount,
+        paidAmount: data.paidAmount,
+        dueDate: data.dueDate,
+        status: data.status,
+      },
+    });
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    return { success: false, error: true };
+  }
+};
+
+export const updateFee = async (
+  currentState: CurrentState,
+  data: FeeSchema
+) => {
+  if (!data.id) return { success: false, error: true };
+  
+  try {
+    await prisma.fee.update({
+      where: { id: data.id },
+      data: {
+        studentId: data.studentId,
+        totalAmount: data.totalAmount,
+        paidAmount: data.paidAmount,
+        dueDate: data.dueDate,
+        status: data.status,
+      },
+    });
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    return { success: false, error: true };
+  }
+};
+
+export const deleteFee = async (
+  currentState: CurrentState,
+  data: FormData
+) => {
+  const id = data.get("id") as string;
+  try {
+    await prisma.fee.delete({
+      where: { id: parseInt(id) },
+    });
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
     return { success: false, error: true };
   }
 };

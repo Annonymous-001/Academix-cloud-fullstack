@@ -33,6 +33,8 @@ model Student {
   attendances Attendance[]
   results     Result[]
   birthday    DateTime
+
+  Fee Fee[]
 }
 
 model Teacher {
@@ -150,7 +152,9 @@ model Result {
 model Attendance {
   id      Int      @id @default(autoincrement())
   date    DateTime
-  present Boolean
+  status  AttendanceStatus @default(PRESENT)
+  inTime  DateTime?
+  outTime DateTime?
 
   studentId String
   student   Student @relation(fields: [studentId], references: [id])
@@ -179,6 +183,42 @@ model Announcement {
   class   Class? @relation(fields: [classId], references: [id])
 }
 
+model Accountant {
+  id        String    @id
+  username  String    @unique
+  name      String
+  surname   String
+  email     String?   @unique
+  phone     String?   @unique
+  address   String
+  createdAt DateTime  @default(now())
+  // Add any accountant-specific fields here
+}
+
+model Fee {
+  id          Int       @id @default(autoincrement())
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id])
+  totalAmount Float
+  paidAmount  Float     @default(0)
+  dueDate     DateTime
+  status      FeeStatus @default(UNPAID)
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  payments    Payment[]
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  amount    Float
+  date      DateTime @default(now())
+  method    PaymentMethod
+  reference String?
+  feeId     Int
+  fee       Fee      @relation(fields: [feeId], references: [id])
+}
+
 enum UserSex {
   MALE
   FEMALE
@@ -191,4 +231,26 @@ enum Day {
   THURSDAY
   FRIDAY
   SATURDAY
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+enum FeeStatus {
+  PAID
+  UNPAID
+  PARTIAL
+  OVERDUE
+  WAIVED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  CHECK
+  BANK_TRANSFER
+  OTHER
 }

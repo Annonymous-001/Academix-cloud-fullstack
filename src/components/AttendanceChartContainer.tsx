@@ -19,13 +19,13 @@ const AttendanceChartContainer = async () => {
     },
     select: {
       date: true,
-      present: true,
+      status: true,
     },
   });
 
   // console.log(data)
 
-  const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+  const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const attendanceMap: { [key: string]: { present: number; absent: number } } =
     {
@@ -34,6 +34,7 @@ const AttendanceChartContainer = async () => {
       Wed: { present: 0, absent: 0 },
       Thu: { present: 0, absent: 0 },
       Fri: { present: 0, absent: 0 },
+      Sat: { present: 0, absent: 0 },
     };
 
   resData.forEach((item) => {
@@ -43,7 +44,7 @@ const AttendanceChartContainer = async () => {
     if (dayOfWeek >= 1 && dayOfWeek <= 5) {
       const dayName = daysOfWeek[dayOfWeek - 1];
 
-      if (item.present) {
+      if (item.status === "PRESENT") {
         attendanceMap[dayName].present += 1;
       } else {
         attendanceMap[dayName].absent += 1;

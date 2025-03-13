@@ -15,7 +15,8 @@ export type FormContainerProps = {
     | "result"
     | "attendance"
     | "event"
-    | "announcement";
+    | "announcement"
+    | "fee"
   type: "create" | "update" | "delete";
   data?: any;
   id?: number | string;
@@ -188,6 +189,13 @@ export const FormContainer = async ({
           relatedData = { students: parentWithStudents?.students || [] };
         }
         break;
+      case "fee":
+        const feeStudents = await prisma.student.findMany({
+          select: { id: true, name: true, surname: true },
+        });
+        relatedData = { students: feeStudents };
+        break;
+      
       default:
         break;
     }
