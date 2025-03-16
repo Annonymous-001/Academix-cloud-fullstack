@@ -5,5 +5,6 @@ export function getUserAuth() {
   return {
     userId,
     role: (sessionClaims?.metadata as { role?: string })?.role,
+    //dsafadsfdsaf
   };
 }
