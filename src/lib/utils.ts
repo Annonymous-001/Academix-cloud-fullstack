@@ -1,5 +1,11 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { auth } from "@clerk/nextjs/server";
+
+const { userId, sessionClaims } = auth();
+
+export const role = (sessionClaims?.metadata as { role?: string })?.role;
+export const currentUserId = userId;
 
 
 const getLatestMonday = (): Date => {

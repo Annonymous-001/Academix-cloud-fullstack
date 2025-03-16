@@ -204,8 +204,17 @@ export const paymentSchema = z.object({
   method: z.enum(["CASH", "CARD", "BANK_TRANSFER"], {
     required_error: "Payment method is required"
   }),
-  paymentDate: z.coerce.date({ required_error: "Payment date is required" }),
-  reference: z.string().optional()
+  date: z.coerce.date({ required_error: "Payment date is required" }),
+  reference: z.string().optional(),
+  transactionId: z.string().optional()
+}).superRefine((val, ctx) => {
+  if (["CARD", "BANK_TRANSFER"].includes(val.method) && !val.transactionId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Transaction ID is required for card/bank payments",
+      path: ["transactionId"]
+    });
+  }
 });
 
 export type PaymentSchema = z.infer<typeof paymentSchema>;

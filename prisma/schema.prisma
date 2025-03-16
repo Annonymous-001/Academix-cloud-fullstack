@@ -4,16 +4,16 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DB_URL")
 }
 
 model Admin {
-  id       String @id
+  id       String @id @default(cuid())
   username String @unique
 }
 
 model Student {
-  id          String       @id
+  id          String       @id @default(cuid())
   username    String       @unique
   name        String
   surname     String
@@ -25,20 +25,19 @@ model Student {
   sex         UserSex
   createdAt   DateTime     @default(now())
   parentId    String
-  parent      Parent       @relation(fields: [parentId], references: [id])
   classId     Int
-  class       Class        @relation(fields: [classId], references: [id])
   gradeId     Int
-  grade       Grade        @relation(fields: [gradeId], references: [id])
-  attendances Attendance[]
-  results     Result[]
   birthday    DateTime
-
-  Fee Fee[]
+  attendances Attendance[]
+  fees        Fee[]
+  results     Result[]
+  class       Class        @relation(fields: [classId], references: [id])
+  grade       Grade        @relation(fields: [gradeId], references: [id])
+  parent      Parent       @relation(fields: [parentId], references: [id])
 }
 
 model Teacher {
-  id        String    @id
+  id        String    @id @default(cuid())
   username  String    @unique
   name      String
   surname   String
@@ -49,14 +48,14 @@ model Teacher {
   bloodType String
   sex       UserSex
   createdAt DateTime  @default(now())
-  subjects  Subject[]
-  lessons   Lesson[]
-  classes   Class[]
   birthday  DateTime
+  classes   Class[]
+  lessons   Lesson[]
+  subjects  Subject[] @relation("SubjectToTeacher")
 }
 
 model Parent {
-  id        String    @id
+  id        String    @id @default(cuid())
   username  String    @unique
   name      String
   surname   String
@@ -68,51 +67,48 @@ model Parent {
 }
 
 model Grade {
-  id    Int @id @default(autoincrement())
-  level Int @unique
-
+  id       Int       @id @default(autoincrement())
+  level    Int       @unique
+  classes  Class[]
   students Student[]
-  classess Class[]
 }
 
 model Class {
-  id       Int    @id @default(autoincrement())
-  name     String @unique
-  capacity Int
-
+  id            Int            @id @default(autoincrement())
+  name          String         @unique
+  capacity      Int
   supervisorId  String?
+  gradeId       Int
+  announcements Announcement[]
+  grade         Grade          @relation(fields: [gradeId], references: [id])
   supervisor    Teacher?       @relation(fields: [supervisorId], references: [id])
+  events        Event[]
   lessons       Lesson[]
   students      Student[]
-  gradeId       Int
-  grade         Grade          @relation(fields: [gradeId], references: [id])
-  events        Event[]
-  announcements Announcement[]
 }
 
 model Subject {
   id       Int       @id @default(autoincrement())
   name     String    @unique
-  teachers Teacher[]
   lessons  Lesson[]
+  teachers Teacher[] @relation("SubjectToTeacher")
 }
 
 model Lesson {
-  id        Int      @id @default(autoincrement())
-  name      String
-  day       Day
-  startTime DateTime
-  endTime   DateTime
-
+  id          Int          @id @default(autoincrement())
+  name        String
+  day         Day
+  startTime   DateTime
+  endTime     DateTime
   subjectId   Int
-  subject     Subject      @relation(fields: [subjectId], references: [id])
   classId     Int
-  class       Class        @relation(fields: [classId], references: [id])
   teacherId   String
-  teacher     Teacher      @relation(fields: [teacherId], references: [id])
-  exams       Exam[]
   assignments Assignment[]
   attendances Attendance[]
+  exams       Exam[]
+  class       Class        @relation(fields: [classId], references: [id])
+  subject     Subject      @relation(fields: [subjectId], references: [id])
+  teacher     Teacher      @relation(fields: [teacherId], references: [id])
 }
 
 model Exam {
@@ -120,10 +116,9 @@ model Exam {
   title     String
   startTime DateTime
   endTime   DateTime
-
-  lessonId Int
-  lesson   Lesson   @relation(fields: [lessonId], references: [id])
-  results  Result[]
+  lessonId  Int
+  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  results   Result[]
 }
 
 model Assignment {
@@ -131,35 +126,32 @@ model Assignment {
   title     String
   startDate DateTime
   dueDate   DateTime
-
-  lessonId Int
-  lesson   Lesson   @relation(fields: [lessonId], references: [id])
-  results  Result[]
+  lessonId  Int
+  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  results   Result[]
 }
 
 model Result {
-  id    Int @id @default(autoincrement())
-  score Int
-
+  id           Int         @id @default(autoincrement())
+  score        Int
   examId       Int?
-  exam         Exam?       @relation(fields: [examId], references: [id])
   assignmentId Int?
-  assignment   Assignment? @relation(fields: [assignmentId], references: [id])
   studentId    String
+  assignment   Assignment? @relation(fields: [assignmentId], references: [id])
+  exam         Exam?       @relation(fields: [examId], references: [id])
   student      Student     @relation(fields: [studentId], references: [id])
 }
 
 model Attendance {
-  id      Int      @id @default(autoincrement())
-  date    DateTime
-  status  AttendanceStatus @default(PRESENT)
-  inTime  DateTime?
-  outTime DateTime?
-
+  id        Int              @id @default(autoincrement())
+  date      DateTime
   studentId String
-  student   Student @relation(fields: [studentId], references: [id])
   lessonId  Int
-  lesson    Lesson  @relation(fields: [lessonId], references: [id])
+  inTime    DateTime?
+  outTime   DateTime?
+  status    AttendanceStatus @default(PRESENT)
+  lesson    Lesson           @relation(fields: [lessonId], references: [id])
+  student   Student          @relation(fields: [studentId], references: [id])
 }
 
 model Event {
@@ -168,9 +160,8 @@ model Event {
   description String
   startTime   DateTime
   endTime     DateTime
-
-  classId Int?
-  class   Class? @relation(fields: [classId], references: [id])
+  classId     Int?
+  class       Class?   @relation(fields: [classId], references: [id])
 }
 
 model Announcement {
@@ -178,27 +169,24 @@ model Announcement {
   title       String
   description String
   date        DateTime
-
-  classId Int?
-  class   Class? @relation(fields: [classId], references: [id])
+  classId     Int?
+  class       Class?   @relation(fields: [classId], references: [id])
 }
 
 model Accountant {
-  id        String    @id
-  username  String    @unique
+  id        String   @id @default(cuid())
+  username  String   @unique
   name      String
   surname   String
-  email     String?   @unique
-  phone     String?   @unique
+  email     String?  @unique
+  phone     String?  @unique
   address   String
-  createdAt DateTime  @default(now())
-  // Add any accountant-specific fields here
+  createdAt DateTime @default(now())
 }
 
 model Fee {
   id          Int       @id @default(autoincrement())
   studentId   String
-  student     Student   @relation(fields: [studentId], references: [id])
   totalAmount Float
   paidAmount  Float     @default(0)
   dueDate     DateTime
@@ -206,17 +194,24 @@ model Fee {
   description String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  student     Student   @relation(fields: [studentId], references: [id])
   payments    Payment[]
 }
 
 model Payment {
-  id        Int      @id @default(autoincrement())
-  amount    Float
-  date      DateTime @default(now())
-  method    PaymentMethod
-  reference String?
-  feeId     Int
-  fee       Fee      @relation(fields: [feeId], references: [id])
+  id            String     @id @default(cuid())  // Ensures a unique required field
+  transactionId String?    @unique              // Can be nullable but still unique
+  amount        Float
+  date          DateTime   @default(now())
+  method        PaymentMethod
+  reference     String?
+
+  feeId         Int
+  fee           Fee        @relation(fields: [feeId], references: [id])
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  
 }
 
 enum UserSex {

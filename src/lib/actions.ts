@@ -19,6 +19,7 @@ import {
 } from "./formValidationSchemas";
 import prisma from "./prisma";
 import { clerkClient } from "@clerk/nextjs/server";
+import { calculateFeeStatus } from "./feeHelpers";
 
 const clerk=clerkClient();
 
@@ -1208,4 +1209,107 @@ export const deleteFee = async (
     console.log(err);
     return { success: false, error: true };
   }
+};
+
+export const createPayment = async (
+  currentState: CurrentState,
+  data: PaymentSchema
+) => {
+  try {
+    console.log("control reaches here")
+    return await prisma.$transaction(async (tx) => {
+      // 1. Create payment
+      const payment = await tx.payment.create({
+        data: {
+          feeId: data.feeId,
+          amount: data.amount,
+          method: data.method,
+          date: data.date,
+          reference: data.reference
+        }
+      });
+
+      // 2. Update fee's paid amount
+      await tx.fee.update({
+        where: { id: data.feeId },
+        data: {
+          paidAmount: { increment: data.amount },
+          status: await calculateFeeStatus(data.feeId, tx)
+        }
+      });
+
+      return { success: true, error: false };
+    },
+    { timeout: 10000 }
+  );
+  } catch (err) {
+    console.error(err);
+    return { success: false, error: true };
+  }
+};
+
+export const updatePayment = async (
+  currentState: CurrentState,
+  data: PaymentSchema
+) => {
+  if (!data.id) return { success: false, error: true };
+
+  return await prisma.$transaction(async (tx) => {
+    // 1. Get existing payment
+    const oldPayment = await tx.payment.findUnique({
+      where: { id: String(data.id) },
+      select: { amount: true, feeId: true }
+    });
+
+    if (!oldPayment) throw new Error("Payment not found");
+
+    // 2. Update payment
+    const updatedPayment = await tx.payment.update({
+      where: { id: String(data.id) },
+      data: {
+        amount: data.amount,
+        method: data.method,
+        date: data.date,
+        reference: data.reference
+      }
+    });
+
+    // 3. Calculate difference and update fee
+    const amountDiff = data.amount - oldPayment.amount;
+    await tx.fee.update({
+      where: { id: oldPayment.feeId },
+      data: {
+        paidAmount: { increment: amountDiff },
+        status: await calculateFeeStatus(oldPayment.feeId, tx)
+      }
+    });
+
+    return { success: true, error: false };
+  });
+};
+
+export const deletePayment = async (
+  currentState: CurrentState,
+  data: FormData
+) => {
+  const id = data.get("id") as string;
+  
+  return await prisma.$transaction(async (tx) => {
+    // 1. Get payment details
+    const payment = await tx.payment.delete({
+      where: { id: String(id) },
+      select: { amount: true, feeId: true }
+    });
+
+    // 2. Update fee
+    await tx.fee.update({
+      where: { id: payment.feeId },
+      data: {
+        paidAmount: { decrement: payment.amount },
+        status: await calculateFeeStatus(payment.feeId, tx)
+      }
+    });
+
+    return { success: true, error: false };
+  });
 };

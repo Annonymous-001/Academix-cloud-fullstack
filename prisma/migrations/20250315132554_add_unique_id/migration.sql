@@ -21,15 +21,21 @@ CREATE TABLE "Fee" (
 
 -- CreateTable
 CREATE TABLE "Payment" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
+    "transactionId" TEXT,
     "amount" DOUBLE PRECISION NOT NULL,
     "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "method" "PaymentMethod" NOT NULL,
     "reference" TEXT,
     "feeId" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Payment_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Payment_transactionId_key" ON "Payment"("transactionId");
 
 -- AddForeignKey
 ALTER TABLE "Fee" ADD CONSTRAINT "Fee_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

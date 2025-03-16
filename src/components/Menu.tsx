@@ -34,7 +34,13 @@ const menuItems = [
         icon: "/badge-indian-rupee1.png",
         label: "Fees",
         href: "/list/fees",
-        visible: ["admin", "teacher", "student", "parent"],
+        visible: ["admin"],
+      },
+      {
+        icon: "/payments.png",
+        label: "Payments",
+        href: "/list/payments",
+        visible: ["admin"],
       },
       {
         icon: "/attendance.png",

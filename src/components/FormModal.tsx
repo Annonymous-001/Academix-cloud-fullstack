@@ -13,6 +13,7 @@ import {
   deleteAnnouncement,
   deleteParent,
   deleteFee,
+  deletePayment,
 } from "@/lib/actions";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -21,6 +22,7 @@ import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useFormState } from "react-dom";
 import { toast } from "react-toastify";
 import { FormContainerProps } from "./FormContainer";
+
 
 const deleteActionMap = {
   subject: deleteSubject,
@@ -36,7 +38,7 @@ const deleteActionMap = {
   attendance: deleteSubject,
   announcement: deleteAnnouncement,
   fee: deleteFee,
-
+  payment: deletePayment,
  }
 
 // USE LAZY LOADING
@@ -78,6 +80,9 @@ const ParentForm = dynamic(() => import("./forms/ParentForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 const FeeForm = dynamic(() => import("./forms/feeForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const PaymentForm = dynamic(() => import("./forms/PaymentForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 // TODO: OTHER FORMS
@@ -180,6 +185,14 @@ const forms: {
   ),
   fee: (setOpen, type, data, relatedData) => (
     <FeeForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  payment: (setOpen, type, data, relatedData) => (
+    <PaymentForm
       type={type}
       data={data}
       setOpen={setOpen}
