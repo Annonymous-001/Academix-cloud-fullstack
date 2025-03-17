@@ -16,6 +16,7 @@ import {
   AccountantSchema,
   FeeSchema,
   PaymentSchema,
+  AttendanceSchema,
 } from "./formValidationSchemas";
 import prisma from "./prisma";
 import { clerkClient } from "@clerk/nextjs/server";
@@ -1312,4 +1313,84 @@ export const deletePayment = async (
 
     return { success: true, error: false };
   });
+};
+export const createAttendance = async (
+  currentState: CurrentState,
+  data: AttendanceSchema
+) => {
+  try {
+    console.log("control reaches here ")
+    await prisma.attendance.create({
+      data: {
+        studentId: data.studentId,
+        lessonId: data.lessonId,
+        date: data.date,
+        // inTime: data.inTime,
+        // outTime: data.outTime,
+        status: data.status,
+      },
+    });
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    return { success: false, error: true };
+  }
+};
+
+export const updateAttendance = async (
+  currentState: CurrentState,
+  data: AttendanceSchema
+) => {
+  if (!data.id) return { success: false, error: true };
+
+  try {
+    await prisma.attendance.update({
+      where: { id: data.id },
+      data: {
+        studentId: data.studentId,
+        lessonId: data.lessonId,
+        date: data.date,
+        // inTime: data.inTime,
+        // outTime: data.outTime,
+        status: data.status,
+      },
+    });
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    return { success: false, error: true };
+  }
+};
+
+export const deleteAttendance = async (
+  currentState: CurrentState,
+  data: FormData
+) => {
+  const id = data.get("id");
+
+  if (!id || isNaN(Number(id))) {
+    return { success: false, error: true, message: "Invalid ID" };
+  }
+
+  try {
+    // First, find the attendance entry
+    const attendance = await prisma.attendance.findUnique({
+      where: { id: Number(id) },
+      include: { student: true, lesson: true },
+    });
+
+    if (!attendance) {
+      return { success: false, error: true, message: "Attendance not found" };
+    }
+
+    // Now delete the attendance record
+    await prisma.attendance.delete({
+      where: { id: Number(id) },
+    });
+
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("Delete Attendance Error:", err);
+    return { success: false, error: true };
+  }
 };

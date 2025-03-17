@@ -248,4 +248,5 @@ enum PaymentMethod {
   CHECK
   BANK_TRANSFER
   OTHER
+  UPI
 }

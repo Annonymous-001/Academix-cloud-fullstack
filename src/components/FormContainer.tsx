@@ -18,6 +18,7 @@ export type FormContainerProps = {
     | "announcement"
     | "fee"
     | "payment"
+    | "attendance"
   type: "create" | "update" | "delete";
   data?: any;
   id?: number | string;
@@ -210,6 +211,28 @@ export const FormContainer = async ({
             }),
           };
           break;
+          case "attendance":
+  const attendanceLessons = await prisma.lesson.findMany({
+    select: {
+      id: true,
+      name: true,
+      subject: { select: { name: true } },
+      class: { select: { name: true } },
+    },
+  });
+
+  const attendanceStudents = await prisma.student.findMany({
+    select: {
+      id: true,
+      name: true,
+      surname: true,
+      class: { select: { name: true } },
+    },
+  });
+
+  relatedData = { lessons: attendanceLessons, students: attendanceStudents };
+  break;
+
     }
   }
 

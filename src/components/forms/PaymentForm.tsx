@@ -6,7 +6,7 @@ import InputField from "../InputField";
 import { paymentSchema, PaymentSchema } from "@/lib/formValidationSchemas";
 import { createPayment, updatePayment } from "@/lib/actions";
 import { useFormState } from "react-dom";
-import { Dispatch, SetStateAction, useEffect } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 
@@ -24,6 +24,7 @@ const PaymentForm = ({
   const {
     register,
     handleSubmit,
+    setValue,  // Fix: Added setValue for handling feeId
     formState: { errors },
   } = useForm<PaymentSchema>({
     resolver: zodResolver(paymentSchema),
@@ -37,9 +38,9 @@ const PaymentForm = ({
     }
   );
 
-  const onSubmit = handleSubmit((data) => {
-    formAction(data);
-    console.log(data)
+  const onSubmit = handleSubmit((formData) => {
+    formAction(formData);
+    console.log(formData);
   });
 
   const router = useRouter();
@@ -53,6 +54,48 @@ const PaymentForm = ({
   }, [state, router, type, setOpen]);
 
   const fees = relatedData?.fees || [];
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedFee, setSelectedFee] = useState<any>(
+    data?.feeId ? fees.find((fee: any) => fee.id === data.feeId) : null
+  );
+
+  const filteredFees = fees.filter((fee: any) => {
+    const fullName = `${fee.student.name} ${fee.student.surname}`.toLowerCase();
+    return fullName.includes(searchTerm.toLowerCase());
+  });
+
+  const handleFeeSelect = (fee: any) => {
+    setSelectedFee(fee);
+    setSearchTerm(`${fee.student.name} ${fee.student.surname}`);
+
+    // Fix: Use setValue to properly update feeId in react-hook-form
+    setValue("feeId", fee.id);
+
+    // Close dropdown after a slight delay
+    setTimeout(() => setIsDropdownOpen(false), 100);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".fee-dropdown-container")) {
+        setIsDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Make sure transaction ID is properly initialized from data
+  useEffect(() => {
+    if (data && data.transactionId) {
+      setValue("transactionId", data.transactionId);
+    }
+  }, [data, setValue]);
 
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
@@ -73,25 +116,44 @@ const PaymentForm = ({
         )}
 
         <div className="flex flex-wrap gap-4">
+          {/* Fee Selection Field */}
           <div className="w-full md:w-[48%]">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 relative fee-dropdown-container">
               <label className="text-xs text-gray-500">Fee</label>
-              <select
+              <input
+                type="text"
                 className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-                {...register("feeId")}
-                defaultValue={data?.feeId}
-              >
-                <option value="">Select a fee</option>
-                {fees.map((fee: any) => (
-                  <option value={fee.id} key={fee.id}>
-                    {fee.student.name} {fee.student.surname} - ₹{fee.totalAmount}
-                  </option>
-                ))}
-              </select>
+                placeholder="Search student name..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setIsDropdownOpen(true);
+                }}
+                onFocus={() => setIsDropdownOpen(true)}
+              />
+              {/* Hidden input for feeId */}
+              <input type="hidden" {...register("feeId")} value={selectedFee?.id || ""} />
+
+              {isDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-60 overflow-y-auto">
+                  {filteredFees.length > 0 ? (
+                    filteredFees.map((fee: any) => (
+                      <div
+                        key={fee.id}
+                        className="p-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => handleFeeSelect(fee)}
+                      >
+                        {fee.student.name} {fee.student.surname} - ₹{fee.totalAmount}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-2 text-gray-500">No matching fees found</div>
+                  )}
+                </div>
+              )}
+
               {errors.feeId?.message && (
-                <p className="text-xs text-red-400">
-                  {errors.feeId.message.toString()}
-                </p>
+                <p className="text-xs text-red-400">{errors.feeId.message.toString()}</p>
               )}
             </div>
           </div>
@@ -109,7 +171,7 @@ const PaymentForm = ({
             label="Date"
             name="date"
             type="date"
-            defaultValue={data?.date ? new Date(data.date).toISOString().split("T")[0] : undefined}
+            defaultValue={data?.date ? new Date(data.date).toISOString().split("T")[0] : ""}
             register={register}
             error={errors?.date}
           />
@@ -128,9 +190,7 @@ const PaymentForm = ({
                 <option value="UPI">UPI</option>
               </select>
               {errors.method?.message && (
-                <p className="text-xs text-red-400">
-                  {errors.method.message.toString()}
-                </p>
+                <p className="text-xs text-red-400">{errors.method.message.toString()}</p>
               )}
             </div>
           </div>
@@ -139,16 +199,14 @@ const PaymentForm = ({
             label="Transaction ID (if applicable)"
             name="transactionId"
             type="text"
-            defaultValue={data?.transactionId}
+            defaultValue={data?.transactionId || ""}
             register={register}
             error={errors?.transactionId}
           />
         </div>
       </div>
 
-      {state?.error && (
-        <span className="text-red-500">Something went wrong!</span>
-      )}
+      {state?.error && <span className="text-red-500">Something went wrong!</span>}
       <button className="bg-blue-400 text-white p-2 rounded-md">
         {type === "create" ? "Create Payment" : "Update Payment"}
       </button>

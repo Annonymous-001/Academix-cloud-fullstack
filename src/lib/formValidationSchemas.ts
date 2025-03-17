@@ -36,7 +36,7 @@ export const teacherSchema = z.object({
     .email({ message: "Invalid email address!" })
     .optional()
     .or(z.literal("")),
-  phone: z.string().optional(),
+    phone: z.string().min(1, { message: "Phone is required!" }),
   address: z.string(),
   img: z.string().optional(),
   bloodType: z.string().min(1, { message: "Blood Type is required!" }),
@@ -179,7 +179,7 @@ export const accountantSchema = z.object({
   name: z.string().min(1, { message: "First name is required!" }),
   surname: z.string().min(1, { message: "Last name is required!" }),
   email: z.string().email({ message: "Invalid email format!" }).optional().nullable(),
-  phone: z.string().optional(),
+  phone: z.string().min(1, { message: "Phone is required!" }),
   address: z.string().min(1, { message: "Address is required!" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters!" }).optional(),
 });
@@ -201,14 +201,14 @@ export const paymentSchema = z.object({
   id: z.coerce.number().optional(),
   feeId: z.coerce.number().min(1, "Fee selection is required"),
   amount: z.coerce.number().min(0.01, "Amount must be greater than 0"),
-  method: z.enum(["CASH", "CARD", "BANK_TRANSFER"], {
+  method: z.enum(["CASH", "CARD", "BANK_TRANSFER","UPI"], {
     required_error: "Payment method is required"
   }),
   date: z.coerce.date({ required_error: "Payment date is required" }),
   reference: z.string().optional(),
   transactionId: z.string().optional()
 }).superRefine((val, ctx) => {
-  if (["CARD", "BANK_TRANSFER"].includes(val.method) && !val.transactionId) {
+  if (["CARD", "BANK_TRANSFER","UPI"].includes(val.method) && !val.transactionId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "Transaction ID is required for card/bank payments",
@@ -218,3 +218,16 @@ export const paymentSchema = z.object({
 });
 
 export type PaymentSchema = z.infer<typeof paymentSchema>;
+export const attendanceSchema = z.object({
+  id: z.coerce.number().optional(),
+  date: z.coerce.date({ message: "Date is required!" }),
+  studentId: z.string().min(1, { message: "Student ID is required!" }),
+  lessonId: z.coerce.number().min(1, { message: "Lesson ID is required!" }),
+  // inTime: z.coerce.date().optional().nullable(),
+  // outTime: z.coerce.date().optional().nullable(),
+  status: z.enum(["PRESENT", "ABSENT", "LATE"], {
+    message: "Status is required!",
+  }),
+});
+
+export type AttendanceSchema = z.infer<typeof attendanceSchema>;
