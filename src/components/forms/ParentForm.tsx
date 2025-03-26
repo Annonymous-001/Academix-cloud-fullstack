@@ -10,7 +10,7 @@ import { useFormState } from "react-dom";
 import { createParent, updateParent } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { CldUploadWidget } from "next-cloudinary";
+
 
 const ParentForm = ({
   type,
@@ -59,7 +59,7 @@ const ParentForm = ({
   const { students } = relatedData || { students: [] };
 
   // Get existing student IDs for update form
-  const existingStudentIds = relatedData?.students?.map((student: any) => student.id).join(',') || '';
+  const existingStudentIds = relatedData?.students?.map((student: any) => student.StudentId).join(',') || '';
 
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>

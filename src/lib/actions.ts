@@ -156,6 +156,27 @@ export const createTeacher = async (
   data: TeacherSchema
 ) => {
   try {
+    // Get the highest current teacher ID to determine the next number
+    const highestTeacher = await prisma.teacher.findFirst({
+      orderBy: {
+        teacherId: 'desc'
+      },
+      select: {
+        teacherId: true
+      }
+    });
+    
+    // Generate the next teacher ID
+    let teacherId;
+    if (!highestTeacher || !highestTeacher.teacherId) {
+      // If no teachers exist yet, start with 1480730003
+      teacherId = "1480730003";
+    } else {
+      // Extract the first digit and increment it
+      const firstDigit = parseInt(highestTeacher.teacherId.charAt(0));
+      const nextDigit = firstDigit + 1;
+      teacherId = `${nextDigit}480730003`;
+    }
   
     // Create user in Clerk
     const user = await clerk.users.createUser({
@@ -185,6 +206,7 @@ export const createTeacher = async (
           bloodType: data.bloodType,
           sex: data.sex,
           birthday: data.birthday,
+          teacherId: teacherId, // Add the hardcoded teacher ID with incremented first digit
           subjects: {
             connect: data.subjects?.map((subjectId: string) => ({
               id: parseInt(subjectId),
@@ -306,6 +328,38 @@ export const createStudent = async (
       return { success: false, error: true };
     }
 
+    // Generate unique student ID with format YYYYMMDDXX001
+    // Where YYYYMMDD is current date, XX are name initials, and 001 is sequential
+    const today = new Date();
+    const dateString = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+    const nameInitials = `${data.name.charAt(0)}${data.surname.charAt(0)}`.toUpperCase();
+    
+    // Get highest student ID with same date and initials prefix to determine next sequential number
+    const prefix = `${dateString}${nameInitials}`;
+    const highestStudent = await prisma.student.findFirst({
+      where: {
+        StudentId: {
+          startsWith: prefix
+        }
+      },
+      orderBy: {
+        StudentId: 'desc'
+      },
+      select: {
+        StudentId: true
+      }
+    });
+    
+    let sequentialNumber = 1;
+    if (highestStudent && highestStudent.StudentId) {
+      // Extract the sequential number from the end of the ID
+      const sequentialPart = highestStudent.StudentId.substring(prefix.length);
+      sequentialNumber = parseInt(sequentialPart) + 1;
+    }
+    
+    // Create the student ID with format YYYYMMDDXX001 (sequential part padded to 3 digits)
+    const studentId = `${prefix}${String(sequentialNumber).padStart(3, '0')}`;
+
     const user = await clerk.users.createUser({
       emailAddress: data.email ? [data.email] : [],
       username: data.username,
@@ -314,7 +368,7 @@ export const createStudent = async (
       lastName: data.surname,
       publicMetadata:{role:"student"}
     });
-console.log("Prisma query execution")
+    console.log("Prisma query execution")
     await prisma.student.create({
       data: {
         id: user.id,
@@ -330,7 +384,7 @@ console.log("Prisma query execution")
         birthday: data.birthday,
         gradeId: data.gradeId,
         classId: data.classId,
-        parentId: data.parentId,
+        StudentId: studentId, // Add the generated student ID with auto-increment
       },
     });
 
@@ -378,7 +432,7 @@ const currentStudent= await prisma.student.findUnique({
         birthday: data.birthday,
         gradeId: data.gradeId,
         classId: data.classId,
-        parentId: data.parentId,
+        // parentId: data.parentId,
       },
     });
     // revalidatePath("/list/students");
@@ -865,6 +919,32 @@ export const createParent = async (
     console.log("Starting parent creation process...");
     console.log("Parent data received:", data);
 
+    // Generate unique parent ID
+    // Format: P-YYYY-XXXX where YYYY is current year and XXXX is sequential number
+    const currentYear = new Date().getFullYear();
+    
+    // Get highest parent ID to determine next sequential number
+    const highestParent = await prisma.parent.findFirst({
+      orderBy: {
+        parentId: 'desc'
+      },
+      select: {
+        parentId: true
+      }
+    });
+    
+    let sequentialNumber = 1;
+    if (highestParent && highestParent.parentId) {
+      // Extract the sequential number from existing format (P-YYYY-XXXX)
+      const parts = highestParent.parentId.split('-');
+      if (parts.length === 3) {
+        sequentialNumber = parseInt(parts[2]) + 1;
+      }
+    }
+    
+    // Create the parent ID with format P-YYYY-XXXX (padded to 4 digits)
+    const parentId = `P-${currentYear}-${String(sequentialNumber).padStart(4, '0')}`;
+
     // Create user in Clerk
     console.log("Creating user in Clerk...");
     const user = await clerk.users.createUser({
@@ -888,6 +968,7 @@ export const createParent = async (
         email: data.email,
         phone: data.phone,
         address: data.address,
+        parentId: parentId, // Add the generated parent ID
       },
     });
 
@@ -895,15 +976,22 @@ export const createParent = async (
     if (data.studentId) {
       const studentIds = data.studentId.split(',').map(id => id.trim());
       
-      // Update each student to connect to this parent
-      await Promise.all(
-        studentIds.map(studentId =>
-          prisma.student.update({
-            where: { id: studentId },
+      // Find students by their StudentId (not Clerk ID)
+      for (const studentId of studentIds) {
+        const student = await prisma.student.findFirst({
+          where: { StudentId: studentId }
+        });
+        
+        if (student) {
+          // Update student to connect to this parent
+          await prisma.student.update({
+            where: { id: student.id },
             data: { parentId: user.id }
-          })
-        )
-      );
+          });
+        } else {
+          console.log(`Student with StudentId ${studentId} not found`);
+        }
+      }
     }
 
     console.log("Parent created successfully in database");
@@ -958,9 +1046,9 @@ export const updateParent = async (
       // Get current students of this parent
       const currentStudents = await prisma.student.findMany({
         where: { parentId: data.id },
-        select: { id: true }
+        select: { StudentId: true }
       });
-      const currentStudentIds = currentStudents.map(s => s.id);
+      const currentStudentIds = currentStudents.map(s => s.StudentId);
 
       // Get new student IDs from the form
       const newStudentIds = data.studentId.split(',').map(id => id.trim());
@@ -972,27 +1060,33 @@ export const updateParent = async (
       const studentsToAdd = newStudentIds.filter(id => !currentStudentIds.includes(id));
 
       // Update students to remove this parent
-      if (studentsToRemove.length > 0) {
-        await Promise.all(
-          studentsToRemove.map(studentId =>
-            prisma.student.update({
-              where: { id: studentId },
-              data: { parentId: user.id }
-            })
-          )
-        );
+      for (const studentId of studentsToRemove) {
+        const student = await prisma.student.findFirst({
+          where: { StudentId: studentId }
+        });
+        
+        if (student) {
+          await prisma.student.update({
+            where: { id: student.id },
+            data: { parentId: null }
+          });
+        }
       }
 
       // Update students to add this parent
-      if (studentsToAdd.length > 0) {
-        await Promise.all(
-          studentsToAdd.map(studentId =>
-            prisma.student.update({
-              where: { id: studentId },
-              data: { parentId: user.id }
-            })
-          )
-        );
+      for (const studentId of studentsToAdd) {
+        const student = await prisma.student.findFirst({
+          where: { StudentId: studentId }
+        });
+        
+        if (student) {
+          await prisma.student.update({
+            where: { id: student.id },
+            data: { parentId: data.id }
+          });
+        } else {
+          console.log(`Student with StudentId ${studentId} not found`);
+        }
       }
     }
 

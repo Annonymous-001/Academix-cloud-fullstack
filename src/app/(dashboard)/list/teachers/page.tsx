@@ -76,7 +76,7 @@ const TeacherListPage = async ({
           <p className="text-xs text-gray-500">{item?.email}</p>
         </div>
       </td>
-      <td className="hidden md:table-cell">{item.username}</td>
+      <td className="hidden md:table-cell">{item.teacherId}</td>
       <td className="hidden md:table-cell">
         {item.subjects.map((subject) => subject.name).join(",")}
       </td>

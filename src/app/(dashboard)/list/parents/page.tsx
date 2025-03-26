@@ -32,6 +32,11 @@ const columns = [
     className: "hidden md:table-cell",
   },
   {
+    header: "Parent ID",
+    accessor: "id",
+    className: "hidden md:table-cell",
+  },
+  {
     header: "Phone",
     accessor: "phone",
     className: "hidden lg:table-cell",
@@ -65,6 +70,7 @@ const renderRow = (item: ParentList) => (
     <td className="hidden md:table-cell">
       {item.students.map((student) => student.name).join(",")}
     </td>
+    <td className="hidden md:table-cell">{item.parentId}</td>
     <td className="hidden md:table-cell">{item.phone}</td>
     <td className="hidden md:table-cell">{item.address}</td>
     <td>

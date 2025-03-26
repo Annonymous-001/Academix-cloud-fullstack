@@ -13,32 +13,35 @@ model Admin {
 }
 
 model Student {
-  id          String       @id @default(cuid())
-  username    String       @unique
-  name        String
-  surname     String
-  email       String?      @unique
-  phone       String?      @unique
-  address     String
-  img         String?
-  bloodType   String
-  sex         UserSex
-  createdAt   DateTime     @default(now())
-  parentId    String
-  classId     Int
-  gradeId     Int
-  birthday    DateTime
-  attendances Attendance[]
-  fees        Fee[]
-  results     Result[]
-  class       Class        @relation(fields: [classId], references: [id])
-  grade       Grade        @relation(fields: [gradeId], references: [id])
-  parent      Parent       @relation(fields: [parentId], references: [id])
+  id           String       @id @default(cuid())
+  username     String       @unique
+  StudentId    String @unique
+  name         String
+  surname      String
+  email        String?      @unique
+  phone        String?      @unique
+  address      String
+  img          String?
+  bloodType    String
+  sex          UserSex
+  createdAt    DateTime     @default(now())
+  parentId     String?
+  classId      Int
+  gradeId      Int
+  birthday     DateTime
+  attendances  Attendance[]
+  fees         Fee[]
+  results      Result[]
+  class        Class        @relation(fields: [classId], references: [id])
+  grade        Grade        @relation(fields: [gradeId], references: [id])
+  parent       Parent?       @relation(fields: [parentId], references: [id])
 }
 
 model Teacher {
   id        String    @id @default(cuid())
   username  String    @unique
+  teacherId String    @unique
+
   name      String
   surname   String
   email     String?   @unique
@@ -57,6 +60,7 @@ model Teacher {
 model Parent {
   id        String    @id @default(cuid())
   username  String    @unique
+  parentId  String @unique
   name      String
   surname   String
   email     String?   @unique
@@ -199,19 +203,16 @@ model Fee {
 }
 
 model Payment {
-  id            String     @id @default(cuid())  // Ensures a unique required field
-  transactionId String?    @unique              // Can be nullable but still unique
+  id            String        @id @default(cuid())
+  transactionId String?       @unique
   amount        Float
-  date          DateTime   @default(now())
+  date          DateTime      @default(now())
   method        PaymentMethod
   reference     String?
-
   feeId         Int
-  fee           Fee        @relation(fields: [feeId], references: [id])
-
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  fee           Fee           @relation(fields: [feeId], references: [id])
 }
 
 enum UserSex {
