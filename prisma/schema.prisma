@@ -191,8 +191,8 @@ model Accountant {
 model Fee {
   id          Int       @id @default(autoincrement())
   studentId   String
-  totalAmount Float
-  paidAmount  Float     @default(0)
+  totalAmount Decimal
+  paidAmount  Decimal     @default(0)
   dueDate     DateTime
   status      FeeStatus @default(UNPAID)
   description String?
@@ -205,7 +205,7 @@ model Fee {
 model Payment {
   id            String        @id @default(cuid())
   transactionId String?       @unique
-  amount        Float
+  amount        Decimal
   date          DateTime      @default(now())
   method        PaymentMethod
   reference     String?

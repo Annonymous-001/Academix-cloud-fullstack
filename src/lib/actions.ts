@@ -329,37 +329,18 @@ export const createStudent = async (
     }
 
     // Generate unique student ID with format YYYYMMDDXX001
-    // Where YYYYMMDD is current date, XX are name initials, and 001 is sequential
+    // Where YYYYMMDD is current date, XX are name initials
     const today = new Date();
     const dateString = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
     const nameInitials = `${data.name.charAt(0)}${data.surname.charAt(0)}`.toUpperCase();
     
-    // Get highest student ID with same date and initials prefix to determine next sequential number
-    const prefix = `${dateString}${nameInitials}`;
-    const highestStudent = await prisma.student.findFirst({
-      where: {
-        StudentId: {
-          startsWith: prefix
-        }
-      },
-      orderBy: {
-        StudentId: 'desc'
-      },
-      select: {
-        StudentId: true
-      }
-    });
+    // Generate random 3 digits for the end of the ID
+    const randomDigits = Math.floor(Math.random() * 900) + 100; // Random number between 100-999
     
-    let sequentialNumber = 1;
-    if (highestStudent && highestStudent.StudentId) {
-      // Extract the sequential number from the end of the ID
-      const sequentialPart = highestStudent.StudentId.substring(prefix.length);
-      sequentialNumber = parseInt(sequentialPart) + 1;
-    }
-    
-    // Create the student ID with format YYYYMMDDXX001 (sequential part padded to 3 digits)
-    const studentId = `${prefix}${String(sequentialNumber).padStart(3, '0')}`;
+    // Create the student ID with format YYYYMMDDXX[random 3 digits]
+    const studentId = `${dateString}${nameInitials}${randomDigits}`;
 
+    // Create user in Clerk
     const user = await clerk.users.createUser({
       emailAddress: data.email ? [data.email] : [],
       username: data.username,
@@ -368,31 +349,44 @@ export const createStudent = async (
       lastName: data.surname,
       publicMetadata:{role:"student"}
     });
-    console.log("Prisma query execution")
-    await prisma.student.create({
-      data: {
-        id: user.id,
-        username: data.username,
-        name: data.name,
-        surname: data.surname,
-        email: data.email || null,
-        phone: data.phone || null,
-        address: data.address,
-        img: data.img || null,
-        bloodType: data.bloodType,
-        sex: data.sex,
-        birthday: data.birthday,
-        gradeId: data.gradeId,
-        classId: data.classId,
-        StudentId: studentId, // Add the generated student ID with auto-increment
-      },
-    });
 
-    // revalidatePath("/list/students");
-    return { success: true, error: false };
-  } catch (err) {
-    console.log(err);
-    return { success: false, error: true };
+    console.log("Clerk user created successfully:", user.id);
+    console.log("Prisma query execution...");
+
+    try {
+      // Store student details in the database
+      await prisma.student.create({
+        data: {
+          id: user.id,
+          username: data.username,
+          name: data.name,
+          surname: data.surname,
+          email: data.email || null,
+          phone: data.phone || null,
+          address: data.address,
+          img: data.img || null,
+          bloodType: data.bloodType,
+          sex: data.sex,
+          birthday: data.birthday,
+          gradeId: data.gradeId,
+          classId: data.classId,
+          StudentId: studentId, // Add the generated student ID with random digits
+        },
+      });
+
+      return { success: true, error: false };
+    } catch (prismaError: any) {
+      console.error("Prisma error:", prismaError);
+
+      // Rollback - Delete user from Clerk if Prisma fails
+      await clerk.users.deleteUser(user.id);
+      console.log("Clerk user deleted due to Prisma failure:", user.id);
+
+      return { success: false, error: true, message: prismaError.message };
+    }
+  } catch (clerkError: any) {
+    console.error("Clerk error:", clerkError);
+    return { success: false, error: true, message: clerkError.message };
   }
 };
 
@@ -451,13 +445,16 @@ export const deleteStudent = async (
 
   try {
     await clerk.users.deleteUser(id);
-const studentExists=await prisma.student.findUnique({
-  where:{id:id},
-});
-if(!studentExists){
-  console.error("Student not found in database:",id);
-  return { success: false, error: true, message: "Student not found" };
-}
+    
+    const studentExists = await prisma.student.findUnique({
+      where: { id: id },
+    });
+    
+    if (!studentExists) {
+      console.error("Student not found in database:", id);
+      return { success: false, error: true, message: "Student not found" };
+    }
+    
     await prisma.student.delete({
       where: {
         id: id,
@@ -957,48 +954,58 @@ export const createParent = async (
     });
     console.log("Clerk user created successfully:", user.id);
 
-    // Create parent in database
-    console.log("Creating parent in database...");
-    await prisma.parent.create({
-      data: {
-        id: user.id,
-        username: data.username,
-        name: data.name,
-        surname: data.surname,
-        email: data.email,
-        phone: data.phone,
-        address: data.address,
-        parentId: parentId, // Add the generated parent ID
-      },
-    });
+    try {
+      // Create parent in database
+      console.log("Creating parent in database...");
+      await prisma.parent.create({
+        data: {
+          id: user.id,
+          username: data.username,
+          name: data.name,
+          surname: data.surname,
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+          parentId: parentId, // Add the generated parent ID
+        },
+      });
 
-    // If there are student IDs, update the students to connect them to this parent
-    if (data.studentId) {
-      const studentIds = data.studentId.split(',').map(id => id.trim());
-      
-      // Find students by their StudentId (not Clerk ID)
-      for (const studentId of studentIds) {
-        const student = await prisma.student.findFirst({
-          where: { StudentId: studentId }
-        });
+      // If there are student IDs, update the students to connect them to this parent
+      if (data.studentId) {
+        const studentIds = data.studentId.split(',').map(id => id.trim());
         
-        if (student) {
-          // Update student to connect to this parent
-          await prisma.student.update({
-            where: { id: student.id },
-            data: { parentId: user.id }
+        // Find students by their StudentId (not Clerk ID)
+        for (const studentId of studentIds) {
+          const student = await prisma.student.findFirst({
+            where: { StudentId: studentId }
           });
-        } else {
-          console.log(`Student with StudentId ${studentId} not found`);
+          
+          if (student) {
+            // Update student to connect to this parent
+            await prisma.student.update({
+              where: { id: student.id },
+              data: { parentId: user.id }
+            });
+          } else {
+            console.log(`Student with StudentId ${studentId} not found`);
+          }
         }
       }
-    }
 
-    console.log("Parent created successfully in database");
-    return { success: true, error: false };
-  } catch (err: any) {
-    console.error("Error in createParent:", err);
-    return { success: false, error: true, message: err.message };
+      console.log("Parent created successfully in database");
+      return { success: true, error: false };
+    } catch (prismaError: any) {
+      console.error("Prisma error:", prismaError);
+
+      // Rollback - Delete user from Clerk if Prisma fails
+      await clerk.users.deleteUser(user.id);
+      console.log("Clerk user deleted due to Prisma failure:", user.id);
+
+      return { success: false, error: true, message: prismaError.message };
+    }
+  } catch (clerkError: any) {
+    console.error("Error in Clerk user creation:", clerkError);
+    return { success: false, error: true, message: clerkError.message };
   }
 };
 
@@ -1103,7 +1110,6 @@ export const deleteParent = async (
   data: FormData
 ) => {
   const id = data.get("id") as string;
-  console.log(id);
   console.log("Deleting parent with ID:", id);
   
   try {
@@ -1126,7 +1132,7 @@ export const deleteParent = async (
         parentExists.students.map(student =>
           prisma.student.update({
             where: { id: student.id },
-            data: { parentId: "" } // Set to empty string or another default parent ID
+            data: { parentId: null } // Set to null instead of empty string
           })
         )
       );
