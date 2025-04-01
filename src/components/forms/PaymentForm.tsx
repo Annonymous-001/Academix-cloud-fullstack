@@ -24,7 +24,7 @@ const PaymentForm = ({
   const {
     register,
     handleSubmit,
-    setValue,  // Fix: Added setValue for handling feeId
+    setValue,
     formState: { errors },
   } = useForm<PaymentSchema>({
     resolver: zodResolver(paymentSchema),
@@ -68,11 +68,7 @@ const PaymentForm = ({
   const handleFeeSelect = (fee: any) => {
     setSelectedFee(fee);
     setSearchTerm(`${fee.student.name} ${fee.student.surname}`);
-
-    // Fix: Use setValue to properly update feeId in react-hook-form
     setValue("feeId", fee.id);
-
-    // Close dropdown after a slight delay
     setTimeout(() => setIsDropdownOpen(false), 100);
   };
 
@@ -116,42 +112,45 @@ const PaymentForm = ({
         )}
 
         <div className="flex flex-wrap gap-4">
-          {/* Fee Selection Field */}
-          <div className="w-full md:w-[48%]">
-            <div className="flex flex-col gap-2 relative fee-dropdown-container">
-              <label className="text-xs text-gray-500">Fee</label>
+          <div className="w-full md:w-[48%] fee-dropdown-container">
+            <div className="flex flex-col gap-2">
+              <label className="text-xs text-gray-500">Search Student</label>
               <input
                 type="text"
                 className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-                placeholder="Search student name..."
+                placeholder="Search for student..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
                   setIsDropdownOpen(true);
                 }}
-                onFocus={() => setIsDropdownOpen(true)}
+                onClick={() => setIsDropdownOpen(true)}
               />
-              {/* Hidden input for feeId */}
-              <input type="hidden" {...register("feeId")} value={selectedFee?.id || ""} />
-
-              {isDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-60 overflow-y-auto">
-                  {filteredFees.length > 0 ? (
-                    filteredFees.map((fee: any) => (
-                      <div
-                        key={fee.id}
-                        className="p-2 hover:bg-gray-100 cursor-pointer"
-                        onClick={() => handleFeeSelect(fee)}
-                      >
-                        {fee.student.name} {fee.student.surname} - ₹{fee.totalAmount}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-2 text-gray-500">No matching fees found</div>
-                  )}
+              {isDropdownOpen && filteredFees.length > 0 && (
+                <div className="absolute bg-white mt-12 shadow-lg rounded-md max-h-60 overflow-y-auto z-10 w-full max-w-md">
+                  {filteredFees.map((fee: any) => (
+                    <div
+                      key={fee.id}
+                      className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                      onClick={() => handleFeeSelect(fee)}
+                    >
+                      <span>{fee.student.name} {fee.student.surname}</span>
+                      <span className="text-green-600 font-semibold">
+                        {Number(fee.totalAmount - fee.paidAmount).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
-
+              {selectedFee ? (
+                <input
+                  type="hidden"
+                  {...register("feeId")}
+                  value={selectedFee.id}
+                />
+              ) : (
+                <input type="hidden" {...register("feeId")} />
+              )}
               {errors.feeId?.message && (
                 <p className="text-xs text-red-400">{errors.feeId.message.toString()}</p>
               )}

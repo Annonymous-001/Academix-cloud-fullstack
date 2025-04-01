@@ -197,42 +197,65 @@ export const FormContainer = async ({
         });
         relatedData = { students: feeStudents };
         break;
-        case "payment":
-          relatedData = {
-            fees: await prisma.fee.findMany({
-              select: { id: true, totalAmount: true,
-               student:{
-                select:{name:true,surname:true}
-               } 
-               },
-            }),
-            students: await prisma.student.findMany({
-              select: { id: true, name: true, surname: true },
-            }),
-          };
-          break;
-          case "attendance":
-  const attendanceLessons = await prisma.lesson.findMany({
-    select: {
-      id: true,
-      name: true,
-      subject: { select: { name: true } },
-      class: { select: { name: true } },
-    },
-  });
+      case "payment":
+        relatedData = {
+          fees: await prisma.fee.findMany({
+            where: {
+              status: {
+                in: ['UNPAID', 'PARTIAL', 'OVERDUE']  // Only show fees that need payment
+              },
+              // Only include fees with remaining balance
+              totalAmount: {
+                gt: 0  // totalAmount > 0
+              }
+            },
+            select: { 
+              id: true, 
+              totalAmount: true,
+              paidAmount: true,
+              dueDate: true,
+              status: true,
+              student: {
+                select: {
+                  id: true,
+                  name: true,
+                  surname: true,
+                  class: {
+                    select: {
+                      name: true
+                    }
+                  }
+                }
+              }
+            },
+            orderBy: [
+              { status: 'desc' },  // OVERDUE first, then PARTIAL, then UNPAID
+              { dueDate: 'asc' }   // Earliest due date first
+            ]
+          })
+        };
+        break;
+      case "attendance":
+        const attendanceLessons = await prisma.lesson.findMany({
+          select: {
+            id: true,
+            name: true,
+            subject: { select: { name: true } },
+            class: { select: { name: true } },
+          },
+        });
 
-  const attendanceStudents = await prisma.student.findMany({
-    select: {
-      id: true,
-      name: true,
-      surname: true,
-      class: { select: { name: true } },
-    },
-  });
+        const attendanceStudents = await prisma.student.findMany({
+          select: {
+            id: true,
+            name: true,
+            surname: true,
+            class: { select: { name: true } },
+          },
+        });
 
-  relatedData = { lessons: attendanceLessons, students: attendanceStudents };
-  break;
-
+        relatedData = { lessons: attendanceLessons, students: attendanceStudents };
+        break;
     }
   }
 

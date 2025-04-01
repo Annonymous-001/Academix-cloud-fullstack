@@ -41,7 +41,7 @@ const PaymentsListPage = async ({
     >
       <td className="p-4">{`${payment.fee.student.name} ${payment.fee.student.surname}`}</td>
       <td>{payment.fee.student.class.name}</td>
-      <td>{payment.amount.toFixed(2)}</td>
+      <td>{Number(payment.amount).toLocaleString()}</td>
       <td>{payment.method}</td>
       <td>
         {new Date(payment.date).toLocaleDateString("en-US", {

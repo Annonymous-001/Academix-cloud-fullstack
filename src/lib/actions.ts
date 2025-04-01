@@ -1256,13 +1256,18 @@ export const createFee = async (
   data: FeeSchema
 ) => {
   try {
+    // Convert to number for comparison
+    const totalAmount = Number(data.totalAmount);
+    // For zero amount fees, automatically set status to PAID
+    const status = totalAmount === 0 ? 'PAID' : data.status;
+    
     await prisma.fee.create({
       data: {
         studentId: data.studentId,
-        totalAmount: data.totalAmount,
-        paidAmount: data.paidAmount,
+        totalAmount: BigInt(data.totalAmount.toString()),
+        paidAmount: data.paidAmount ? BigInt(data.paidAmount.toString()) : BigInt(0),
         dueDate: data.dueDate,
-        status: data.status,
+        status: status, // Use the status we determined above
       },
     });
     return { success: true, error: false };
@@ -1276,17 +1281,20 @@ export const updateFee = async (
   currentState: CurrentState,
   data: FeeSchema
 ) => {
-  if (!data.id) return { success: false, error: true };
-  
   try {
+    // Convert to number for comparison
+    const totalAmount = Number(data.totalAmount);
+    // For zero amount fees, automatically set status to PAID
+    const status = totalAmount === 0 ? 'PAID' : data.status;
+    
     await prisma.fee.update({
       where: { id: data.id },
       data: {
         studentId: data.studentId,
-        totalAmount: data.totalAmount,
-        paidAmount: data.paidAmount,
+        totalAmount: BigInt(data.totalAmount.toString()),
+        paidAmount: data.paidAmount ? BigInt(data.paidAmount.toString()) : BigInt(0),
         dueDate: data.dueDate,
-        status: data.status,
+        status: status, // Use the status we determined above
       },
     });
     return { success: true, error: false };
@@ -1326,15 +1334,29 @@ export const createPayment = async (
           amount: data.amount,
           method: data.method,
           date: data.date,
-          reference: data.reference
+          reference: data.reference,
+          transactionId: data.transactionId || null
         }
       });
 
-      // 2. Update fee's paid amount
+      // 2. First update the fee's paid amount
+      const updatedFee = await tx.fee.update({
+        where: { id: data.feeId },
+        data: {
+          paidAmount: { increment: BigInt(data.amount) }
+        },
+        select: {
+          id: true,
+          totalAmount: true,
+          paidAmount: true,
+          dueDate: true
+        }
+      });
+      
+      // 3. Now calculate and set the status with the updated amounts
       await tx.fee.update({
         where: { id: data.feeId },
         data: {
-          paidAmount: { increment: data.amount },
           status: await calculateFeeStatus(data.feeId, tx)
         }
       });
@@ -1371,12 +1393,12 @@ export const updatePayment = async (
         amount: data.amount,
         method: data.method,
         date: data.date,
-        reference: data.reference
+        reference: data.reference,
+        transactionId: data.transactionId || null
       }
     });
-
     // 3. Calculate difference and update fee
-    const amountDiff = data.amount - oldPayment.amount;
+    const amountDiff = BigInt(data.amount) - BigInt(oldPayment.amount);
     await tx.fee.update({
       where: { id: oldPayment.feeId },
       data: {
