@@ -7,6 +7,7 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Class, Prisma, Teacher } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
+import Link from "next/link";
 
 type ClassList = Class & { supervisor: Teacher };
 
@@ -63,6 +64,11 @@ const renderRow = (item: ClassList) => (
     </td>
     <td>
       <div className="flex items-center gap-2">
+        <Link href={`/list/classes/${item.id}`}>
+          <button className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaSky">
+            <Image src="/view.png" alt="" width={16} height={16} />
+          </button>
+        </Link>
         {role === "admin" && (
           <>
             <FormContainer table="class" type="update" data={item} />
