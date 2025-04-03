@@ -12,43 +12,66 @@ import { FiMoon, FiSun } from "react-icons/fi";
 const LoginPage = () => {
   const { isLoaded, isSignedIn, user } = useUser();
   const [darkMode, setDarkMode] = useState(false);
+  const [isPageLoaded, setIsPageLoaded] = useState(false);
   const router = useRouter();
 
+  // Handle page load
   useEffect(() => {
+    // Set page as loaded
+    setIsPageLoaded(true);
+    
     // Check for saved theme preference for login page only
     const savedLoginTheme = localStorage.getItem("loginTheme");
     if (savedLoginTheme === "dark" || 
         (!savedLoginTheme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
       setDarkMode(true);
-      // Don't modify document.documentElement.classList to avoid affecting other pages
     }
+    
+    // Clear any potential stale session data
+    sessionStorage.removeItem("lastSignedIn");
   }, []);
 
+  // Fixed type checking for user metadata
+  const userRole = user?.publicMetadata?.role as string | undefined;
+
+  // Use the properly typed userRole variable
   useEffect(() => {
-    if (isLoaded && isSignedIn && user) {
-      const role = user.publicMetadata.role;
-      if (role) {
-        // Before redirecting, clean up any class modifications
-        router.push(`/${role}`);
-      }
+    if (isLoaded && isSignedIn && userRole) {
+      sessionStorage.setItem("lastSignedIn", "true");
+      setTimeout(() => {
+        router.push(`/${userRole}`);
+      }, 1500);
     }
-  }, [isLoaded, isSignedIn, user, router]);
+  }, [isLoaded, isSignedIn, user, router, userRole]);
 
   const toggleTheme = () => {
     setDarkMode(!darkMode);
-    // Store theme preference with a different key specific to login page
     localStorage.setItem("loginTheme", darkMode ? "light" : "dark");
   };
+
+  // Show loading state until Clerk has loaded
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  // Make sure we've completely loaded the page before rendering form
+  if (!isPageLoaded) {
+    return null;
+  }
 
   return (
     <div className={`min-h-screen flex items-center justify-center bg-gradient-to-br ${
       darkMode ? 'from-gray-900 to-gray-800 text-white' : 'from-lamaSkyLight to-blue-200'
-    } transition-colors duration-500`}>
+    } transition-colors duration-500 overflow-hidden relative`}>
       {/* Theme toggle */}
       <motion.button
         className={`absolute top-6 right-6 p-2 rounded-full ${
           darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-white text-gray-800'
-        } shadow-lg`}
+        } shadow-lg z-20`}
         onClick={toggleTheme}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
@@ -59,48 +82,77 @@ const LoginPage = () => {
         {darkMode ? <FiSun size={24} /> : <FiMoon size={24} />}
       </motion.button>
 
-      {/* Animated elements */}
+      {/* Fixed redirecting indicator with userRole */}
+      {isLoaded && isSignedIn && userRole && (
+        <motion.div 
+          className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-full flex items-center shadow-lg z-20"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
+          <span className="text-sm font-medium">Redirecting to dashboard...</span>
+        </motion.div>
+      )}
+
+      {/* Improved animated background elements */}
       <motion.div 
-        className="absolute w-full h-full pointer-events-none"
+        className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-0"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 2 }}
       >
-        {[...Array(5)].map((_, i) => (
-          <motion.div
-            key={i}
-            className={`absolute rounded-full ${
-              darkMode ? 'bg-blue-500/10' : 'bg-white/30'
-            }`}
-            style={{
-              width: Math.random() * 300 + 50,
-              height: Math.random() * 300 + 50,
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-            }}
-            initial={{ scale: 0, x: -20 }}
-            animate={{ 
-              scale: [0, 1, 0.9, 1],
-              x: [0, 10, -10, 0],
-              y: [0, -10, 10, 0],
-            }}
-            transition={{ 
-              duration: 10 + Math.random() * 10,
-              repeat: Infinity,
-              repeatType: "reverse",
-              delay: i * 0.5,
-            }}
-          />
-        ))}
+        {/* Create 8 animated elements with better distribution */}
+        {[...Array(8)].map((_, i) => {
+          // Pre-calculate fixed positions to ensure good distribution
+          const positions = [
+            { top: '15%', left: '15%' },
+            { top: '15%', left: '85%' },
+            { top: '85%', left: '15%' },
+            { top: '85%', left: '85%' },
+            { top: '30%', left: '50%' },
+            { top: '70%', left: '50%' },
+            { top: '50%', left: '30%' },
+            { top: '50%', left: '70%' },
+          ];
+          
+          return (
+            <motion.div
+              key={i}
+              className={`absolute rounded-full ${
+                darkMode ? 'bg-blue-500/10' : 'bg-white/30'
+              }`}
+              style={{
+                width: 100 + Math.random() * 200,
+                height: 100 + Math.random() * 200,
+                top: positions[i].top,
+                left: positions[i].left,
+                zIndex: 0,
+              }}
+              initial={{ scale: 0 }}
+              animate={{ 
+                scale: [0, 1, 0.8, 1],
+                x: [0, i % 2 === 0 ? 50 : -50, i % 2 === 0 ? -20 : 20, 0],
+                y: [0, i % 2 === 0 ? -50 : 50, i % 2 === 0 ? 20 : -20, 0],
+              }}
+              transition={{ 
+                duration: 15 + (i * 3),
+                repeat: Infinity,
+                repeatType: "reverse",
+                delay: i * 0.8,
+              }}
+            />
+          );
+        })}
       </motion.div>
 
-      {/* Sign-in form with tilt effect */}
+      {/* Sign-in form with tilt effect and proper z-index */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         whileHover={{ scale: 1.02 }}
         style={{ perspective: 1000 }}
+        className="z-10 relative"
       >
         <motion.div
           whileHover={{ rotateX: 5, rotateY: 5 }}
@@ -109,7 +161,7 @@ const LoginPage = () => {
           dragElastic={0.1}
           className={`${
             darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'
-          } p-12 rounded-2xl shadow-2xl max-w-md w-full mx-4`}
+          } p-12 rounded-2xl shadow-2xl max-w-md w-full mx-4 relative z-10`}
         >
           <SignIn.Root>
             <SignIn.Step
