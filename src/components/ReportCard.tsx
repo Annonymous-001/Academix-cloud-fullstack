@@ -22,7 +22,13 @@ type StudentWithResults = {
   })[];
 };
 
-export const ReportCard = ({ student }: { student: StudentWithResults }) => {
+export const ReportCard = ({ 
+  student, 
+  onLogoLoad 
+}: { 
+  student: StudentWithResults;
+  onLogoLoad?: () => void;
+}) => {
   // Group results by subject - only include results with valid exam data
   const subjectResults = (student.results || []).reduce((acc, result) => {
     if (!result.exam || !result.exam.lesson || !result.exam.lesson.subject) return acc;
@@ -72,7 +78,15 @@ export const ReportCard = ({ student }: { student: StudentWithResults }) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="bg-white p-2 rounded-full">
-              <Image src="/logo.png" alt="School Logo" width={60} height={60} className="h-14 w-14" />
+              <Image 
+                src="/logo.png" 
+                alt="School Logo" 
+                width={60} 
+                height={60} 
+                className="h-14 w-14" 
+                onLoad={onLogoLoad}
+                priority
+              />
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Academix School</h1>

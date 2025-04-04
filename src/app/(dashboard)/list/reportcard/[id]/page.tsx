@@ -30,6 +30,7 @@ export default function ReportCardPage({ params }: { params: { id: string } }) {
   const [student, setStudent] = useState<StudentWithResults | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [logoLoaded, setLogoLoaded] = useState(false);
 
   useEffect(() => {
     async function fetchStudentData() {
@@ -50,15 +51,26 @@ export default function ReportCardPage({ params }: { params: { id: string } }) {
     }
 
     fetchStudentData();
+    
+    // Preload the logo image
+    const logoImage = new Image();
+    logoImage.src = '/logo.png';
+    logoImage.onload = () => setLogoLoaded(true);
   }, [params.id]);
 
   const handleDownload = () => {
+    // Ensure logo is loaded before generating PDF
+    if (!logoLoaded) {
+      alert("Please wait for images to load completely before downloading.");
+      return;
+    }
+    
     const element = document.getElementById('report-card');
     html2pdf().set({
       margin: 0.5,
       filename: `${student?.name}_${student?.surname}_report_card.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
+      html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
     }).from(element).save();
   };
@@ -91,13 +103,14 @@ export default function ReportCardPage({ params }: { params: { id: string } }) {
     <div className="p-4 bg-gray-100 min-h-screen">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold mb-4 text-center">Student Report Card</h1>
-        <ReportCard student={student} />
+        <ReportCard student={student} onLogoLoad={() => setLogoLoaded(true)} />
         <div className="text-center mt-6">
           <button
             onClick={handleDownload}
-            className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-md"
+            disabled={!logoLoaded}
+            className={`px-6 py-3 ${!logoLoaded ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md transition-colors shadow-md`}
           >
-            Download as PDF
+            {logoLoaded ? 'Download as PDF' : 'Loading images...'}
           </button>
         </div>
       </div>
