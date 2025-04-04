@@ -59,19 +59,25 @@ export default function ReportCardPage({ params }: { params: { id: string } }) {
   }, [params.id]);
 
   const handleDownload = () => {
-    // Ensure logo is loaded before generating PDF
-    if (!logoLoaded) {
-      alert("Please wait for images to load completely before downloading.");
-      return;
-    }
-    
     const element = document.getElementById('report-card');
+    
+    // More compact PDF settings for single page
     html2pdf().set({
-      margin: 0.5,
+      margin: [0.2, 0.2], // Smaller margins
       filename: `${student?.name}_${student?.surname}_report_card.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: { 
+        scale: 1.5, // Lower scale for smaller file
+        useCORS: true,
+        logging: true, // Help debug
+        letterRendering: true
+      },
+      jsPDF: { 
+        unit: 'in', 
+        format: 'letter', 
+        orientation: 'portrait',
+        compress: true
+      },
     }).from(element).save();
   };
 
