@@ -21,6 +21,7 @@ import {
 import prisma from "./prisma";
 import { clerkClient } from "@clerk/nextjs/server";
 import { calculateFeeStatus } from "./feeHelpers";
+import { revalidatePath } from "next/cache";
 
 const clerk=clerkClient();
 
@@ -1514,5 +1515,67 @@ export const deleteAttendance = async (
   } catch (err) {
     console.error("Delete Attendance Error:", err);
     return { success: false, error: true };
+  }
+};
+
+export const getStudentReportData = async (studentId: string) => {
+  try {
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: {
+        id: true,
+        name: true,
+        surname: true,
+        StudentId: true,
+        class: {
+          select: {
+            name: true,
+          },
+        },
+        results: {
+          include: {
+            exam: {
+              include: {
+                lesson: {
+                  include: {
+                    subject: {
+                      select: {
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            exam: {
+              lesson: {
+                subject: {
+                  name: 'asc',
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!student) {
+      return { success: false, error: true, message: "Student not found" };
+    }
+
+    return { 
+      success: true, 
+      error: false, 
+      data: student 
+    };
+  } catch (error) {
+    console.error("Error fetching student report data:", error);
+    return { 
+      success: false, 
+      error: true, 
+      message: "Failed to fetch student report data" 
+    };
   }
 };

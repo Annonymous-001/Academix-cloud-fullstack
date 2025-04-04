@@ -188,6 +188,12 @@ const SingleStudentPage = async ({
             >
               Student&apos;s Results
             </Link>
+            <Link
+              className="p-3 rounded-md bg-green-50"
+              href={`/list/reportcard/${student.id}`}
+            >
+              Generate Report Card
+            </Link>
           </div>
         </div>
         <Performance />
