@@ -12,69 +12,81 @@ type LessonList = Lesson & { subject: Subject } & { class: Class } & {
   teacher: Teacher;
 };
 
-
 const LessonListPage = async ({
   searchParams,
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
+  const { sessionClaims } = auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
 
-const { sessionClaims } = auth();
-const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const columns = [
+    {
+      header: "Subject",
+      accessor: "subject",
+    },
+    {
+      header: "Day",
+      accessor: "day",
+      className: "hidden md:table-cell",
+    },
+    {
+      header: "Time",
+      accessor: "time",
+      className: "hidden md:table-cell",
+    },
+    {
+      header: "Teacher",
+      accessor: "teacher",
+      className: "hidden md:table-cell",
+    },
+    ...(role === "admin"
+      ? [
+          {
+            header: "Actions",
+            accessor: "action",
+          },
+        ]
+      : []),
+  ];
 
+  const renderRow = (item: LessonList) => {
+    const startTime = new Date(item.startTime).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+    const endTime = new Date(item.endTime).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
 
-const columns = [
-  {
-    header: "Subject Name",
-    accessor: "name",
-  },
-  {
-    header: "Class",
-    accessor: "class",
-  },
-  {
-    header: "Teacher",
-    accessor: "teacher",
-    className: "hidden md:table-cell",
-  },
-  ...(role === "admin"
-    ? [
-        {
-          header: "Actions",
-          accessor: "action",
-        },
-      ]
-    : []),
-];
-
-const renderRow = (item: LessonList) => (
-  <tr
-    key={item.id}
-    className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
-  >
-    <td className="flex items-center gap-4 p-4">{item.subject.name}</td>
-    <td>{item.class.name}</td>
-    <td className="hidden md:table-cell">
-      {item.teacher.name + " " + item.teacher.surname}
-    </td>
-    <td>
-      <div className="flex items-center gap-2">
+    return (
+      <tr
+        key={item.id}
+        className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-gray-100"
+      >
+        <td className="p-4">{item.subject.name}</td>
+        <td className="p-4 hidden md:table-cell">{item.day}</td>
+        <td className="p-4 hidden md:table-cell">{`${startTime} - ${endTime}`}</td>
+        <td className="p-4 hidden md:table-cell">
+          {`${item.teacher.name} ${item.teacher.surname}`}
+        </td>
         {role === "admin" && (
-          <>
-            <FormContainer table="lesson" type="update" data={item} />
-            <FormContainer table="lesson" type="delete" id={item.id} />
-          </>
+          <td className="p-4">
+            <div className="flex items-center gap-2">
+              <FormContainer table="lesson" type="update" data={item} />
+              <FormContainer table="lesson" type="delete" id={item.id} />
+            </div>
+          </td>
         )}
-      </div>
-    </td>
-  </tr>
-);
+      </tr>
+    );
+  };
 
   const { page, ...queryParams } = searchParams;
-
   const p = page ? parseInt(page) : 1;
-
-  // URL PARAMS CONDITION
 
   const query: Prisma.LessonWhereInput = {};
 
@@ -117,23 +129,23 @@ const renderRow = (item: LessonList) => (
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
-      {/* TOP */}
+      {/* TOP SECTION */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Lessons</h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-yellow-400">
               <Image src="/filter.png" alt="" width={14} height={14} />
             </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-yellow-400">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
             {role === "admin" && <FormContainer table="lesson" type="create" />}
           </div>
         </div>
       </div>
-      {/* LIST */}
+      {/* LIST SECTION */}
       <Table columns={columns} renderRow={renderRow} data={data} />
       {/* PAGINATION */}
       <Pagination page={p} count={count} />
