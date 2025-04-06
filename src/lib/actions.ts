@@ -1579,3 +1579,58 @@ export const getStudentReportData = async (studentId: string) => {
     };
   }
 };
+// Add this function to your lib/actions.ts file
+
+export const getStudentIdCardData = async (studentId: string) => {
+  try {
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: {
+        id: true,
+        name: true,
+        surname: true,
+        StudentId: true,
+        bloodType: true,
+        sex: true,
+        birthday: true,
+        phone: true,
+        img: true,
+        address: true,
+        class: {
+          select: {
+            name: true,
+          },
+        },
+        grade: {
+          select: {
+            level: true,
+          },
+        },
+        parent: {
+          select: {
+            name: true,
+            surname: true,
+            phone: true,
+          }
+        }
+      },
+    });
+
+    if (!student) {
+      return { success: false, error: true, message: "Student not found" };
+    }
+
+    return { 
+      success: true, 
+      error: false, 
+      data: student 
+    };
+  } catch (error) {
+    console.error("Error fetching student ID card data:", error);
+    return { 
+      success: false, 
+      error: true, 
+      message: "Failed to fetch student ID card data" 
+    };
+  }
+};
