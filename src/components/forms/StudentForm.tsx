@@ -42,15 +42,13 @@ const StudentForm = ({
   );
 
   const onSubmit = handleSubmit((data) => {
-    console.log("hello");
-    console.log(data);
     formAction({ ...data, img: img?.secure_url });
   });
 
   const router = useRouter();
 
   useEffect(() => {
-    if (state&&state.success) {
+    if (state && state.success) {
       toast(`Student has been ${type === "create" ? "created" : "updated"}!`);
       setOpen(false);
       router.refresh();
@@ -89,6 +87,14 @@ const StudentForm = ({
           defaultValue={data?.password}
           register={register}
           error={errors?.password}
+        />
+        <InputField
+          label="IEMIS Code"
+          name="IEMISCODE"
+          type="number"
+          defaultValue={data?.IEMISCODE}
+          register={register}
+          error={errors?.IEMISCODE}
         />
       </div>
       <span className="text-xs text-gray-400 font-medium">
@@ -141,6 +147,20 @@ const StudentForm = ({
           error={errors.surname}
         />
         <InputField
+          label="Mother's Name"
+          name="motherName"
+          defaultValue={data?.motherName}
+          register={register}
+          error={errors.motherName}
+        />
+        <InputField
+          label="Father's Name"
+          name="fatherName"
+          defaultValue={data?.fatherName}
+          register={register}
+          error={errors.fatherName}
+        />
+        <InputField
           label="Phone"
           name="phone"
           defaultValue={data?.phone}
@@ -183,6 +203,28 @@ const StudentForm = ({
             <p className="text-xs text-red-400">{errors.sex.message}</p>
           )}
         </div>
+        
+        <div className="flex flex-col gap-2 w-full md:w-1/4">
+          <label className="text-xs text-gray-500">Disability</label>
+          <select
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+            {...register("disability")}
+            defaultValue={data?.disability || "NONE"}
+          >
+            <option value="NONE">None</option>
+            <option value="VISION">Vision</option>
+            <option value="HEARING">Hearing</option>
+            <option value="MOBILITY">Mobility</option>
+            <option value="COGNITIVE">Cognitive</option>
+            <option value="SPEECH">Speech</option>
+            <option value="MENTAL_HEALTH">Mental Health</option>
+            <option value="OTHER">Other</option>
+          </select>
+          {errors.disability?.message && (
+            <p className="text-xs text-red-400">{errors.disability.message}</p>
+          )}
+        </div>
+        
         <div className="flex flex-col gap-2 w-full md:w-1/4">
           <label className="text-xs text-gray-500">Grade</label>
           <select

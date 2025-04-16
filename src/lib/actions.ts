@@ -326,7 +326,7 @@ export const createStudent = async (
     });
 
     if (classItem && classItem.capacity === classItem._count.students) {
-      return { success: false, error: true };
+      return { success: false, error: true, message: "Class capacity is full." };
     }
 
     // Generate unique student ID with format YYYYMMDDXX001
@@ -362,6 +362,11 @@ export const createStudent = async (
           username: data.username,
           name: data.name,
           surname: data.surname,
+          // Add new fields
+          motherName: data.motherName,
+          fatherName: data.fatherName,
+          IEMISCODE: data.IEMISCODE,
+          disability: data.disability || "NONE",
           email: data.email || null,
           phone: data.phone || null,
           address: data.address,
@@ -371,7 +376,8 @@ export const createStudent = async (
           birthday: data.birthday,
           gradeId: data.gradeId,
           classId: data.classId,
-          StudentId: studentId, // Add the generated student ID with random digits
+          StudentId: studentId,
+          parentId: data.parentId || null,
         },
       });
 
@@ -405,19 +411,25 @@ export const updateStudent = async (
       firstName: data.name,
       lastName: data.surname,
     });
-const currentStudent= await prisma.student.findUnique({
-  where:{id:data.id},
-  select:{img:true}
-})
+    
+    const currentStudent = await prisma.student.findUnique({
+      where: {id: data.id},
+      select: {img: true}
+    });
+    
     await prisma.student.update({
       where: {
         id: data.id,
       },
       data: {
-        // ...(data.password !== "" && { password: data.password }),
         username: data.username,
         name: data.name,
         surname: data.surname,
+        // Add new fields in update
+        motherName: data.motherName,
+        fatherName: data.fatherName,
+        IEMISCODE: data.IEMISCODE,
+        disability: data.disability || "NONE",
         email: data.email || null,
         phone: data.phone || null,
         address: data.address,
@@ -427,17 +439,16 @@ const currentStudent= await prisma.student.findUnique({
         birthday: data.birthday,
         gradeId: data.gradeId,
         classId: data.classId,
-        // parentId: data.parentId,
+        parentId: data.parentId || null,
       },
     });
-    // revalidatePath("/list/students");
+  
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
     return { success: false, error: true };
   }
 };
-
 export const deleteStudent = async (
   currentState: CurrentState,
   data: FormData

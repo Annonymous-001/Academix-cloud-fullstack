@@ -60,6 +60,11 @@ export const studentSchema = z.object({
     .or(z.literal("")),
   name: z.string().min(1, { message: "First name is required!" }),
   surname: z.string().min(1, { message: "Last name is required!" }),
+  // Add mother and father name fields
+  motherName: z.string().min(1, { message: "Mother's name is required!" }),
+  fatherName: z.string().min(1, { message: "Father's name is required!" }),
+  // Add IEMISCODE field
+  IEMISCODE: z.coerce.number().min(1, { message: "IEMIS Code is required!" }),
   email: z
     .string()
     .email({ message: "Invalid email address!" })
@@ -73,7 +78,10 @@ export const studentSchema = z.object({
   sex: z.enum(["MALE", "FEMALE"], { message: "Sex is required!" }),
   gradeId: z.coerce.number().min(1, { message: "Grade is required!" }),
   classId: z.coerce.number().min(1, { message: "Class is required!" }),
-  // parentId: z.string().optional()
+  // Add disability field
+  disability: z.enum(["NONE", "VISION", "HEARING", "MOBILITY", "COGNITIVE", "SPEECH", "MENTAL_HEALTH", "OTHER"]),
+  // parentId field remains optional
+  parentId: z.string().optional()
 });
 
 export type StudentSchema = z.infer<typeof studentSchema>;
