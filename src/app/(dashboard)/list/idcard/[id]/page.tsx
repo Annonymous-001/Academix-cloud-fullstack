@@ -2,7 +2,7 @@
 
 import { StudentIDCard } from '@/components/StudentIDCard';
 import html2pdf from 'html2pdf.js';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getStudentIdCardData } from '@/lib/actions';
 
 type StudentWithDetails = {
@@ -33,7 +33,9 @@ export default function IDCardPage({ params }: { params: { id: string } }) {
   const [student, setStudent] = useState<StudentWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [logoLoaded, setLogoLoaded] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  
   const currentYear = new Date().getFullYear();
   const schoolYear = `${currentYear}-${currentYear + 1}`;
   const expiryDate = `31/07/${currentYear + 1}`;
@@ -57,32 +59,68 @@ export default function IDCardPage({ params }: { params: { id: string } }) {
     }
 
     fetchStudentData();
-    
-    // Preload the logo image
-    const logoImage = new Image();
-    logoImage.src = '/logo.png';
-    logoImage.onload = () => setLogoLoaded(true);
   }, [params.id]);
 
-  const handleDownload = () => {
-    const element = document.getElementById('student-id-card');
-    
-    html2pdf().set({
-      margin: [0.1, 0.1],
-      filename: `${student?.name}_${student?.surname}_id_card.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 2,
-        useCORS: true,
-        letterRendering: true
-      },
-      jsPDF: { 
-        unit: 'in', 
-        format: [3.375, 5.25], // Standard ID card size
-        orientation: 'portrait',
-        compress: true
-      },
-    }).from(element).save();
+  const handleDownload = async () => {
+    try {
+      setIsGenerating(true);
+      const element = cardRef.current;
+      
+      if (!element) {
+        throw new Error('ID card element not found');
+      }
+      
+      // Pre-load all images in the card
+      const images = Array.from(element.querySelectorAll('img'));
+      
+      // Wait for all images to load
+      await Promise.all(
+        images.map((img) => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          });
+        })
+      );
+      
+      // Add a delay to ensure rendering is complete
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      const opt = {
+        margin: [0.1, 0.1],
+        filename: `${student?.name}_${student?.surname}_id_card.pdf`,
+        image: { 
+          type: 'jpeg', 
+          quality: 0.98
+        },
+        html2canvas: { 
+          scale: 4, // Higher scale for better quality
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          letterRendering: true,
+          imageTimeout: 0, // No timeout for images
+          backgroundColor: '#ffffff'
+        },
+        jsPDF: { 
+          unit: 'in', 
+          format: [3.375, 5.25], // Standard ID card size
+          orientation: 'portrait',
+          compress: true,
+          hotfixes: ["px_scaling"]
+        }
+      };
+      
+      // Generate and save the PDF
+      await html2pdf().set(opt).from(element).save();
+      
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      alert('There was an error generating the PDF. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   if (loading) {
@@ -113,22 +151,31 @@ export default function IDCardPage({ params }: { params: { id: string } }) {
     <div className="p-4 bg-gray-100 min-h-screen">
       <div className="max-w-md mx-auto">
         <h1 className="text-2xl font-bold mb-4 text-center">Student ID Card</h1>
-        <StudentIDCard 
-          student={student} 
-          onLogoLoad={() => setLogoLoaded(true)}
-          schoolYear={schoolYear}
-          expiryDate={expiryDate}
-        />
+        <div className="bg-white rounded-lg shadow-md overflow-hidden" ref={cardRef}>
+          <StudentIDCard 
+            student={student}
+            schoolYear={schoolYear}
+            expiryDate={expiryDate}
+          />
+        </div>
         <div className="text-center mt-6">
           <button
             onClick={handleDownload}
-            disabled={!logoLoaded}
-            className={`px-6 py-3 ${!logoLoaded ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md transition-colors shadow-md`}
+            disabled={isGenerating}
+            className={`px-6 py-3 ${
+              isGenerating 
+                ? 'bg-gray-400' 
+                : 'bg-blue-600 hover:bg-blue-700'
+            } text-white rounded-md transition-colors shadow-md`}
           >
-            {logoLoaded ? 'Download ID Card' : 'Loading images...'}
+            {isGenerating 
+              ? 'Generating PDF...' 
+              : 'Download ID Card'}
           </button>
           <p className="mt-3 text-sm text-gray-500">
-            ID card will be downloaded as a PDF document
+            {isGenerating 
+              ? 'Please wait while we prepare your PDF...' 
+              : 'ID card will be downloaded as a PDF document'}
           </p>
         </div>
       </div>

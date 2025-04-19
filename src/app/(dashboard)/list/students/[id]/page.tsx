@@ -60,7 +60,10 @@ const SingleStudentPage = async ({
                 )}
               </div>
               <p className="text-sm text-gray-500">
-                Lorem ipsum, dolor sit amet consectetur adipisicing elit.
+                <span className="font-medium">IEMIS Code:</span> {student.IEMISCODE} <br />
+                <span className="font-medium">Father&apos;s Name:</span> {student.fatherName} <br />
+                <span className="font-medium">Mother&apos;s Name:</span> {student.motherName} <br />
+                <span className="font-medium">Disability:</span> {student.disability}
               </p>
               <div className="flex items-center justify-between gap-2 flex-wrap text-xs font-medium">
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
@@ -193,6 +196,12 @@ const SingleStudentPage = async ({
               href={`/list/reportcard/${student.id}`}
             >
               Generate Report Card
+            </Link>
+            <Link
+              className="p-3 rounded-md bg-orange-50"
+              href={`/list/idcard/${student.id}`}
+            >
+              Generate ID Card
             </Link>
           </div>
         </div>
