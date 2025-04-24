@@ -25,7 +25,27 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={inter.className}>
-          {children} <ToastContainer position="bottom-right" theme="dark" />
+          {children} <ToastContainer 
+            position="bottom-center"
+            theme="dark"
+            limit={1}
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            style={{
+              width: 'auto',
+              maxWidth: '90%',
+              fontSize: '14px',
+              padding: '8px 16px',
+              margin: '0 auto',
+              borderRadius: '8px',
+            }}
+          />
         </body>
       </html>
     </ClerkProvider>
