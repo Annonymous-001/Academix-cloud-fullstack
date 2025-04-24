@@ -38,7 +38,13 @@ const FeesListPage = async ({
       className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
     >
       <td className="p-4">{`${fee.student.name} ${fee.student.surname}`}</td>
-      <td>{fee.student.class.name}</td>
+      <td>
+        {(() => {
+          const className = fee.student.class.name.replace('Class ', '');
+          const [grade, section] = className.split('-');
+          return section ? `${grade}${section}` : grade;
+        })()}
+      </td>
       <td>{Number(fee.totalAmount).toLocaleString()}</td>
       <td>{Number(fee.totalAmount - fee.paidAmount).toLocaleString()}</td>
 

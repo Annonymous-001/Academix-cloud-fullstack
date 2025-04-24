@@ -22,6 +22,7 @@ export type FormContainerProps = {
   type: "create" | "update" | "delete";
   data?: any;
   id?: number | string;
+  relatedData?: any;
 };
 
 export const FormContainer = async ({

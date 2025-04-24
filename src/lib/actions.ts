@@ -1448,27 +1448,54 @@ export const deletePayment = async (
     return { success: true, error: false };
   });
 };
-export const createAttendance = async (
-  currentState: CurrentState,
-  data: AttendanceSchema
-) => {
-  try {
-    console.log("control reaches here ")
-    await prisma.attendance.create({
-      data: {
-        studentId: data.studentId,
-        lessonId: data.lessonId,
-        date: data.date,
-        // inTime: data.inTime,
-        // outTime: data.outTime,
-        status: data.status,
-      },
-    });
-    return { success: true, error: false };
-  } catch (err) {
-    console.log(err);
-    return { success: false, error: true };
-  }
+// In your actions file, you might want to add more robust error handling  
+export const createAttendance = async (  
+  currentState: CurrentState,  
+  data: AttendanceSchema  
+) => {  
+  try {  
+    // Check for existing attendance on the same day  
+    const existingAttendance = await prisma.attendance.findFirst({  
+      where: {  
+        studentId: data.studentId,  
+        lessonId: data.lessonId,  
+        date: {  
+          gte: new Date(new Date().setHours(0, 0, 0, 0)),  
+          lt: new Date(new Date().setHours(23, 59, 59, 999))  
+        }  
+      }  
+    });  
+
+    if (existingAttendance) {  
+      return {   
+        success: false,   
+        error: true,   
+        message: "Attendance already recorded for this student today"   
+      };  
+    }  
+
+    await prisma.attendance.create({  
+      data: {  
+        studentId: data.studentId,  
+        lessonId: data.lessonId,  
+        date: data.date,  
+        status: data.status,  
+      },  
+    });  
+
+    return {   
+      success: true,   
+      error: false,  
+      message: "Attendance recorded successfully"   
+    };  
+  } catch (err) {  
+    console.error(err);  
+    return {   
+      success: false,   
+      error: true,  
+      message: "Failed to create attendance"   
+    };  
+  }  
 };
 
 export const updateAttendance = async (
@@ -1590,7 +1617,6 @@ export const getStudentReportData = async (studentId: string) => {
     };
   }
 };
-// Add this function to your lib/actions.ts file
 
 export const getStudentIdCardData = async (studentId: string) => {
   try {
@@ -1643,5 +1669,40 @@ export const getStudentIdCardData = async (studentId: string) => {
       error: true, 
       message: "Failed to fetch student ID card data" 
     };
+  }
+};
+
+export const getFeeReceiptData = async (feeId: string) => {
+  try {
+    const fee = await prisma.fee.findUnique({
+      where: {
+        id: parseInt(feeId),
+      },
+      include: {
+        student: {
+          include: {
+            class: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        payments: {
+          orderBy: {
+            date: 'desc',
+          },
+        },
+      },
+    });
+
+    if (!fee) {
+      throw new Error('Fee not found');
+    }
+
+    return fee;
+  } catch (error) {
+    console.error('Error fetching fee receipt data:', error);
+    throw error;
   }
 };

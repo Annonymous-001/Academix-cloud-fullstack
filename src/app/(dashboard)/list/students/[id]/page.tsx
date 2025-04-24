@@ -203,6 +203,12 @@ const SingleStudentPage = async ({
             >
               Generate ID Card
             </Link>
+            <Link
+              className="p-3 rounded-md bg-blue-50"
+              href={`/list/fees/student/${student.id}`}
+            >
+              Student&apos;s Fees
+            </Link>
           </div>
         </div>
         <Performance />
