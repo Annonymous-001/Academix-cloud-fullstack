@@ -11,7 +11,16 @@ model Admin {
   id       String @id @default(cuid())
   username String @unique
 }
-
+model Notification {
+  id          Int      @id @default(autoincrement())
+  title       String
+  message     String
+  createdAt   DateTime @default(now())
+  isRead      Boolean  @default(false)
+  recipientId String   // Clerk user ID
+  type        String?  // e.g., "announcement", "event", "assignment", "exam", etc.
+  linkUrl     String?  // URL to navigate to when clicked
+}
 model Student {
   id           String       @id @default(cuid())
   username     String       @unique
