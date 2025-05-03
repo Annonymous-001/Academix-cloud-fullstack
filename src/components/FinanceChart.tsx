@@ -12,70 +12,13 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const data = [
-  {
-    name: "Jan",
-    income: 4000,
-    expense: 2400,
-  },
-  {
-    name: "Feb",
-    income: 3000,
-    expense: 1398,
-  },
-  {
-    name: "Mar",
-    income: 2000,
-    expense: 9800,
-  },
-  {
-    name: "Apr",
-    income: 2780,
-    expense: 3908,
-  },
-  {
-    name: "May",
-    income: 1890,
-    expense: 4800,
-  },
-  {
-    name: "Jun",
-    income: 2390,
-    expense: 3800,
-  },
-  {
-    name: "Jul",
-    income: 3490,
-    expense: 4300,
-  },
-  {
-    name: "Aug",
-    income: 3490,
-    expense: 4300,
-  },
-  {
-    name: "Sep",
-    income: 3490,
-    expense: 4300,
-  },
-  {
-    name: "Oct",
-    income: 3490,
-    expense: 4300,
-  },
-  {
-    name: "Nov",
-    income: 3490,
-    expense: 4300,
-  },
-  {
-    name: "Dec",
-    income: 3490,
-    expense: 4300,
-  },
-];
+type ChartData = {
+  name: string;
+  income: number;
+  expense: number;
+}[];
 
-const FinanceChart = () => {
+const FinanceChart = ({ data }: { data: ChartData }) => {
   return (
     <div className="bg-white rounded-xl w-full h-full p-4">
       <div className="flex justify-between items-center">
@@ -102,8 +45,17 @@ const FinanceChart = () => {
             tickLine={false}
             tickMargin={10}
           />
-          <YAxis axisLine={false} tick={{ fill: "#d1d5db" }} tickLine={false}  tickMargin={20}/>
-          <Tooltip />
+          <YAxis 
+            axisLine={false} 
+            tick={{ fill: "#d1d5db" }} 
+            tickLine={false} 
+            tickMargin={20}
+            tickFormatter={(value) => `₹${value.toLocaleString()}`}
+          />
+          <Tooltip 
+            formatter={(value: number) => [`₹${value.toLocaleString()}`, '']}
+            labelFormatter={(label) => `Month: ${label}`}
+          />
           <Legend
             align="center"
             verticalAlign="top"
@@ -114,8 +66,17 @@ const FinanceChart = () => {
             dataKey="income"
             stroke="#C3EBFA"
             strokeWidth={5}
+            dot={{ r: 4 }}
+            activeDot={{ r: 6 }}
           />
-          <Line type="monotone" dataKey="expense" stroke="#CFCEFF" strokeWidth={5}/>
+          <Line 
+            type="monotone" 
+            dataKey="expense" 
+            stroke="#CFCEFF" 
+            strokeWidth={5}
+            dot={{ r: 4 }}
+            activeDot={{ r: 6 }}
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>

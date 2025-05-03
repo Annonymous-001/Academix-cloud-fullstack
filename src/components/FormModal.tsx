@@ -90,6 +90,9 @@ const PaymentForm = dynamic(() => import("./forms/PaymentForm"), {
 const AttendanceForm = dynamic(() => import("./forms/AttendanceForm"), {
   loading: () => <h1>Loading...</h1>,
 });
+const FinanceForm = dynamic(() => import("./forms/FinanceForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
 // TODO: OTHER FORMS
 
 const forms: {
@@ -210,6 +213,13 @@ const forms: {
       data={data}
       setOpen={setOpen}
       relatedData={relatedData}
+    />
+  ),
+  finance: (setOpen, type, data) => (
+    <FinanceForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
     />
   ),
 };

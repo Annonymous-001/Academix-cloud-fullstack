@@ -238,3 +238,14 @@ export const attendanceSchema = z.object({
 });
 
 export type AttendanceSchema = z.infer<typeof attendanceSchema>;
+
+export const financeSchema = z.object({
+  id: z.coerce.number().optional(),
+  expenseType: z.enum(["BUS", "SALARY", "MAINTENANCE", "SUPPLIES", "UTILITIES", "OTHER"], {
+    required_error: "Expense type is required"
+  }),
+  amount: z.coerce.number().positive("Amount must be positive"),
+  description: z.string().optional(),
+});
+
+export type FinanceSchema = z.infer<typeof financeSchema>;

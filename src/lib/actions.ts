@@ -17,6 +17,7 @@ import {
   FeeSchema,
   PaymentSchema,
   AttendanceSchema,
+  FinanceSchema,
 } from "./formValidationSchemas";
 import prisma from "./prisma";
 import { clerkClient } from "@clerk/nextjs/server";
@@ -1704,5 +1705,64 @@ export const getFeeReceiptData = async (feeId: string) => {
   } catch (error) {
     console.error('Error fetching fee receipt data:', error);
     throw error;
+  }
+};
+
+export const createFinance = async (
+  currentState: CurrentState,
+  data: FinanceSchema
+) => {
+  try {
+    await prisma.finance.create({
+      data: {
+        expenseType: data.expenseType,
+        amount: BigInt(data.amount.toString()),
+        description: data.description,
+        updatedAt: new Date(),
+      },
+    });
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    return { success: false, error: true };
+  }
+};
+
+export const updateFinance = async (
+  currentState: CurrentState,
+  data: FinanceSchema
+) => {
+  if (!data.id) return { success: false, error: true };
+
+  try {
+    await prisma.finance.update({
+      where: { id: data.id },
+      data: {
+        expenseType: data.expenseType,
+        amount: BigInt(data.amount.toString()),
+        description: data.description,
+        updatedAt: new Date(),
+      },
+    });
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    return { success: false, error: true };
+  }
+};
+
+export const deleteFinance = async (
+  currentState: CurrentState,
+  data: FormData
+) => {
+  const id = data.get("id") as string;
+  try {
+    await prisma.finance.delete({
+      where: { id: parseInt(id) },
+    });
+    return { success: true, error: false };
+  } catch (err) {
+    console.log(err);
+    return { success: false, error: true };
   }
 };
