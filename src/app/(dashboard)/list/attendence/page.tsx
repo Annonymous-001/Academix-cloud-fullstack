@@ -39,7 +39,7 @@ const AttendanceListPage = async ({
     >
       <td className="p-4">{`${attendance.student.name} ${attendance.student.surname}`}</td>
       <td>{attendance.student.class.name}</td>
-      <td>{attendance.lesson.name}</td>
+      <td>{attendance.lesson?.name || "General"}</td>
       <td>
         {new Date(attendance.date).toLocaleDateString("en-US", {
           year: "numeric",
@@ -97,8 +97,21 @@ const AttendanceListPage = async ({
       student: { parentId: currentUserId },
     });
   } else if (role === "teacher") {
+    // For teachers, show attendance for their supervised classes
+    const teacherClasses = await prisma.class.findMany({
+      where: {
+        OR: [
+          { supervisorId: currentUserId || undefined },
+          { lessons: { some: { teacherId: currentUserId || undefined } } }
+        ]
+      },
+      select: { id: true }
+    });
+    
     query.where.AND.push({
-      lesson: { teacherId: currentUserId },
+      classId: {
+        in: teacherClasses.map(c => c.id)
+      }
     });
   }
 

@@ -1,6 +1,9 @@
 import prisma from "@/lib/prisma";
 import FormModal from "./FormModal";
 import { auth } from "@clerk/nextjs/server";
+import { Class, Lesson, Student } from "@prisma/client";
+
+type ClassSelect = Pick<Class, 'id' | 'name'>;
 
 export type FormContainerProps = {
   table:
@@ -237,25 +240,73 @@ export const FormContainer = async ({
         };
         break;
       case "attendance":
-        const attendanceLessons = await prisma.lesson.findMany({
+        // Get classes based on role
+        let availableClasses: ClassSelect[] = [];
+        if (role === "teacher" && currentUserId) {
+          // For teachers who are supervisors, only show their supervised class
+          availableClasses = await prisma.class.findMany({
+            where: {
+              OR: [
+                { supervisorId: currentUserId },
+                { lessons: { some: { teacherId: currentUserId } } }
+              ]
+            },
+            select: {
+              id: true,
+              name: true
+            }
+          });
+        } else if (role === "admin") {
+          // Admin can see all classes
+          availableClasses = await prisma.class.findMany({
+            select: {
+              id: true,
+              name: true
+            }
+          });
+        }
+
+        // Get lessons for the available classes
+        const availableLessons = await prisma.lesson.findMany({
+          where: {
+            classId: {
+              in: availableClasses.map(c => c.id)
+            },
+            ...(role === "teacher" && currentUserId ? { teacherId: currentUserId } : {})
+          },
           select: {
             id: true,
             name: true,
-            subject: { select: { name: true } },
-            class: { select: { name: true } },
-          },
+            classId: true
+          }
         });
 
-        const attendanceStudents = await prisma.student.findMany({
+        // Get students for the available classes
+        const availableStudents = await prisma.student.findMany({
+          where: {
+            classId: {
+              in: availableClasses.map(c => c.id)
+            }
+          },
           select: {
             id: true,
             name: true,
             surname: true,
-            class: { select: { name: true } },
-          },
+            StudentId: true,
+            classId: true,
+            class: {
+              select: {
+                name: true
+              }
+            }
+          }
         });
 
-        relatedData = { lessons: attendanceLessons, students: attendanceStudents };
+        relatedData = { 
+          classes: availableClasses,
+          lessons: availableLessons,
+          students: availableStudents
+        };
         break;
     }
   }

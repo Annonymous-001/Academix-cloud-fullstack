@@ -37,12 +37,12 @@ const deleteActionMap = {
   result: deleteResult,
   event: deleteEvent,
   parent: deleteParent,
-  attendance: deleteSubject,
+  attendance: deleteAttendance,
   announcement: deleteAnnouncement,
   fee: deleteFee,
   payment: deletePayment,
-  attendence:deleteAttendance,
-  finance:deleteFinance
+  attendence: deleteAttendance,
+  finance: deleteFinance
  }
 
 // USE LAZY LOADING

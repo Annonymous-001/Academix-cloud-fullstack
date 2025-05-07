@@ -2,32 +2,38 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { routeAccessMap } from "./lib/settings";
 import { NextResponse } from "next/server";
 
-const matchers = Object.keys(routeAccessMap).map((route) => ({
+// Create matchers for each route and its allowed roles
+const matchers = Object.entries(routeAccessMap).map(([route, allowedRoles]) => ({
   matcher: createRouteMatcher([route]),
-  allowedRoles: routeAccessMap[route],
+  allowedRoles,
 }));
 
-// console.log(matchers);
-
 export default clerkMiddleware((auth, req) => {
-  // if (isProtectedRoute(req)) auth().protect()
-
   const { sessionClaims } = auth();
 
+  // Extract the user's role from session claims
   const role = (sessionClaims?.metadata as { role?: string })?.role;
 
+  // Iterate through matchers to check access permissions
   for (const { matcher, allowedRoles } of matchers) {
-    if (matcher(req) && !allowedRoles.includes(role!)) {
-      return NextResponse.redirect(new URL(`/${role}`, req.url));
+    if (matcher(req)) {
+      // If the user's role is not allowed, redirect accordingly
+      if (!role || !allowedRoles.includes(role)) {
+        return NextResponse.redirect(new URL(`/${role ?? "unauthorized"}`, req.url));
+      }
     }
   }
 });
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
-    "/(api|trpc)(.*)",
+    // Match all routes except static files and Next.js internals
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Match all API routes
+    "/api/:path*",
+    // Match all list routes
+    "/list/:path*",
+    // Match all dashboard routes
+    "/(dashboard)/:path*"
   ],
 };

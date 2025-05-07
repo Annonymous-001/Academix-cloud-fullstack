@@ -89,6 +89,7 @@ const AttendanceForm = ({
   setOpen: Dispatch<SetStateAction<boolean>>;
   relatedData?: any;
 }) => {
+  const [currentClassId, setCurrentClassId] = useState<string>("");
   const [currentLessonId, setCurrentLessonId] = useState<string>("");
   const [processedStudents, setProcessedStudents] = useState<string[]>([]);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -109,14 +110,16 @@ const AttendanceForm = ({
   );
 
   const router = useRouter();
+  const classes = relatedData?.classes || [];
   const lessons = relatedData?.lessons || [];
   const students = (relatedData?.students || []).filter(
-    (student: any) => !processedStudents.includes(student.id)
+    (student: any) => !processedStudents.includes(student.id) && 
+    (!currentClassId || student.classId === parseInt(currentClassId))
   );
 
   const handleSwipe = async (direction: "left" | "right", studentId: string) => {
-    if (!currentLessonId) {
-      toast.error("Please select a lesson first!");
+    if (!currentClassId) {
+      toast.error("Please select a class first!");
       return;
     }
 
@@ -125,7 +128,8 @@ const AttendanceForm = ({
       { success: false, error: false },
       {
         studentId,
-        lessonId: parseInt(currentLessonId),
+        classId: parseInt(currentClassId),
+        ...(currentLessonId ? { lessonId: parseInt(currentLessonId) } : {}),
         date: currentDate,
         status,
       }
@@ -135,7 +139,7 @@ const AttendanceForm = ({
       setProcessedStudents(prev => [...prev, studentId]);
       toast.success(`Marked ${status.toLowerCase()}`);
     } else {
-      toast.error("Failed to mark attendance");
+      toast.error(result.message || "Failed to mark attendance");
     }
   };
 
@@ -146,21 +150,46 @@ const AttendanceForm = ({
       <div className="flex flex-col gap-4">
         <div className="w-full">
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-gray-500">Lesson</label>
+            <label className="text-xs text-gray-500">Class</label>
             <select
               className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-              value={currentLessonId}
-              onChange={(e) => setCurrentLessonId(e.target.value)}
+              value={currentClassId}
+              onChange={(e) => {
+                setCurrentClassId(e.target.value);
+                setCurrentLessonId(""); // Reset lesson when class changes
+              }}
             >
-              <option value="">Select a lesson</option>
-              {lessons.map((lesson: any) => (
-                <option value={lesson.id} key={lesson.id}>
-                  {lesson.name} - {lesson.subject?.name} ({lesson.class?.name})
+              <option value="">Select a class</option>
+              {classes.map((classItem: any) => (
+                <option value={classItem.id} key={classItem.id}>
+                  {classItem.name}
                 </option>
               ))}
             </select>
           </div>
         </div>
+
+        {currentClassId && (
+          <div className="w-full">
+            <div className="flex flex-col gap-2">
+              <label className="text-xs text-gray-500">Lesson (Optional)</label>
+              <select
+                className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+                value={currentLessonId}
+                onChange={(e) => setCurrentLessonId(e.target.value)}
+              >
+                <option value="">General Attendance</option>
+                {lessons
+                  .filter((lesson: any) => lesson.classId === parseInt(currentClassId))
+                  .map((lesson: any) => (
+                    <option value={lesson.id} key={lesson.id}>
+                      {lesson.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+        )}
 
         <div className="w-full">
           <div className="flex flex-col gap-2">
@@ -184,7 +213,7 @@ const AttendanceForm = ({
               />
             ) : (
               <div className="text-center text-gray-500 py-8">
-                No more students to mark attendance for
+                {currentClassId ? "No more students to mark attendance for" : "Please select a class"}
               </div>
             )}
           </AnimatePresence>

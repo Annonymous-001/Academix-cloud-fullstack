@@ -172,7 +172,7 @@ export const createTeacher = async (
     let teacherId;
     if (!highestTeacher || !highestTeacher.teacherId) {
       // If no teachers exist yet, start with 1480730003
-      teacherId = "1480730003";
+      teacherId = "7480730003";
     } else {
       // Extract the first digit and increment it
       const firstDigit = parseInt(highestTeacher.teacherId.charAt(0));
@@ -1459,11 +1459,11 @@ export const createAttendance = async (
     const existingAttendance = await prisma.attendance.findFirst({  
       where: {  
         studentId: data.studentId,  
-        lessonId: data.lessonId,  
         date: {  
-          gte: new Date(new Date().setHours(0, 0, 0, 0)),  
-          lt: new Date(new Date().setHours(23, 59, 59, 999))  
-        }  
+          gte: new Date(new Date(data.date).setHours(0, 0, 0, 0)),  
+          lt: new Date(new Date(data.date).setHours(23, 59, 59, 999))  
+        },
+        ...(data.lessonId ? { lessonId: data.lessonId } : {})
       }  
     });  
 
@@ -1477,8 +1477,9 @@ export const createAttendance = async (
 
     await prisma.attendance.create({  
       data: {  
-        studentId: data.studentId,  
-        lessonId: data.lessonId,  
+        studentId: data.studentId,
+        classId: data.classId,
+        ...(data.lessonId ? { lessonId: data.lessonId } : {}),
         date: data.date,  
         status: data.status,  
       },  
@@ -1510,10 +1511,9 @@ export const updateAttendance = async (
       where: { id: data.id },
       data: {
         studentId: data.studentId,
-        lessonId: data.lessonId,
+        classId: data.classId,
+        ...(data.lessonId ? { lessonId: data.lessonId } : {}),
         date: data.date,
-        // inTime: data.inTime,
-        // outTime: data.outTime,
         status: data.status,
       },
     });
@@ -1614,7 +1614,7 @@ export const getStudentReportData = async (studentId: string) => {
     return { 
       success: false, 
       error: true, 
-      message: "Failed to fetch student report data" 
+      message: "Failed to fetch student report data"
     };
   }
 };

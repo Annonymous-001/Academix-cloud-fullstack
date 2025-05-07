@@ -4,7 +4,7 @@ import FormContainer from "@/components/FormContainer";
 import Performance from "@/components/Performance";
 import StudentAttendanceCard from "@/components/StudentAttendanceCard";
 import prisma from "@/lib/prisma";
-import { getUserAuth } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import { Class, Student } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,7 +16,8 @@ const SingleStudentPage = async ({
 }: {
   params: { id: string };
 }) => {
-  const { role } = getUserAuth(); 
+  const { sessionClaims } = auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
 
   const student:
     | (Student & {

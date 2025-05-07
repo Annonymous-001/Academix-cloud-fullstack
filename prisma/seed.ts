@@ -385,11 +385,15 @@ async function main() {
           const inTime = new Date(attendanceDate);
           inTime.setHours(startHour, faker.number.int({ min: 0, max: 30 }), 0);
           
+          // Randomly decide if this attendance should be associated with a lesson
+          const shouldAssociateWithLesson = faker.datatype.boolean();
+          
           await prisma.attendance.create({
             data: {
               date: attendanceDate,
               studentId: student.id,
-              lessonId: lesson.id,
+              classId: classObj.id,
+              ...(shouldAssociateWithLesson ? { lessonId: lesson.id } : {}),
               inTime: inTime,
               status: faker.helpers.arrayElement(['PRESENT', 'ABSENT', 'LATE']) as AttendanceStatus,
             },
@@ -452,6 +456,31 @@ async function main() {
           }
         }
       }
+    }
+  }
+
+  // Create general attendance records (without lessons)
+  for (const classObj of classes) {
+    const classStudents = students.filter(student => student.classId === classObj.id);
+    const studentsForGeneralAttendance = faker.helpers.arrayElements(
+      classStudents,
+      faker.number.int({ min: 5, max: 10 })
+    );
+    
+    for (const student of studentsForGeneralAttendance) {
+      const attendanceDate = faker.date.recent();
+      const inTime = new Date(attendanceDate);
+      inTime.setHours(faker.number.int({ min: 8, max: 14 }), faker.number.int({ min: 0, max: 30 }), 0);
+      
+      await prisma.attendance.create({
+        data: {
+          date: attendanceDate,
+          studentId: student.id,
+          classId: classObj.id,
+          inTime: inTime,
+          status: faker.helpers.arrayElement(['PRESENT', 'ABSENT', 'LATE']) as AttendanceStatus,
+        },
+      });
     }
   }
 

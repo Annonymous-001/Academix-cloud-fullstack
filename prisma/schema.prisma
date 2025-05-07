@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output = "./generated/client"
 }
 
 datasource db {
@@ -92,6 +93,7 @@ model Class {
   events        Event[]
   lessons       Lesson[]
   students      Student[]
+  attendances   Attendance[]
 }
 
 model Subject {
@@ -111,8 +113,8 @@ model Lesson {
   classId     Int
   teacherId   String
   assignments Assignment[]
-  attendances Attendance[]
   exams       Exam[]
+  attendances Attendance[]
   class       Class        @relation(fields: [classId], references: [id])
   subject     Subject      @relation(fields: [subjectId], references: [id])
   teacher     Teacher      @relation(fields: [teacherId], references: [id])
@@ -153,12 +155,14 @@ model Attendance {
   id        Int              @id @default(autoincrement())
   date      DateTime
   studentId String
-  lessonId  Int
+  classId   Int
+  lessonId  Int?
   inTime    DateTime?
   outTime   DateTime?
   status    AttendanceStatus @default(PRESENT)
-  lesson    Lesson           @relation(fields: [lessonId], references: [id])
+  class     Class            @relation(fields: [classId], references: [id])
   student   Student          @relation(fields: [studentId], references: [id])
+  lesson    Lesson?          @relation(fields: [lessonId], references: [id])
 }
 
 model Event {

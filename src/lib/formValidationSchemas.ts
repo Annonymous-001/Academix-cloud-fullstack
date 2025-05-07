@@ -229,9 +229,8 @@ export const attendanceSchema = z.object({
   id: z.coerce.number().optional(),
   date: z.coerce.date({ message: "Date is required!" }),
   studentId: z.string().min(1, { message: "Student ID is required!" }),
-  lessonId: z.coerce.number().min(1, { message: "Lesson ID is required!" }),
-  // inTime: z.coerce.date().optional().nullable(),
-  // outTime: z.coerce.date().optional().nullable(),
+  classId: z.coerce.number().min(1, { message: "Class ID is required!" }),
+  lessonId: z.coerce.number().optional(),
   status: z.enum(["PRESENT", "ABSENT", "LATE"], {
     message: "Status is required!",
   }),

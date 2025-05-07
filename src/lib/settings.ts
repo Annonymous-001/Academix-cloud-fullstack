@@ -4,13 +4,18 @@ type RouteAccessMap = {
   [key: string]: string[];
 };
 
+
 export const routeAccessMap: RouteAccessMap = {
   "/admin(.*)": ["admin"],
   "/student(.*)": ["student"],
   "/teacher(.*)": ["teacher"],
   "/parent(.*)": ["parent"],
   "/list/teachers": ["admin", "teacher"],
+  "/list/teachers/:id": ["admin", "teacher"],
   "/list/students": ["admin", "teacher"],
+  "/list/students(.*)": ["admin", "teacher"],
+  "/list/students/:id": ["admin", "teacher"],
+
   "/list/parents": ["admin", "teacher"],
   "/list/subjects": ["admin"],
   "/list/classes": ["admin", "teacher"],
@@ -20,4 +25,5 @@ export const routeAccessMap: RouteAccessMap = {
   "/list/attendance": ["admin", "teacher", "student", "parent"],
   "/list/events": ["admin", "teacher", "student", "parent"],
   "/list/announcements": ["admin", "teacher", "student", "parent"],
+
 };
