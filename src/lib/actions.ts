@@ -1477,13 +1477,13 @@ export const createAttendance = async (
 
     await prisma.attendance.create({  
       data: {
+        date: data.date,
         studentId: data.studentId,
         classId: data.classId,
         lessonId: data.lessonId || undefined,
-        date: data.date,
-        status: data.status,
         inTime: new Date(),
-        outTime: null
+        outTime: null,
+        status: data.status
       }
     });  
 
