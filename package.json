@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm i --save-dev prisma@latest eslint@8.57.1 --legacy-peer-deps && npm i @prisma/client@latest --legacy-peer-deps && npx prisma generate && next build",
+    "build": "npm i --save-dev prisma@latest eslint@8.57.1 --legacy-peer-deps && npm i @prisma/client@latest --legacy-peer-deps && rm -rf .next && npx prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
