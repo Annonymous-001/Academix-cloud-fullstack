@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { utils, write } from 'xlsx';
+import ExcelJS from 'exceljs';
 
 export async function GET() {
   // Create sample data
@@ -23,15 +23,34 @@ export async function GET() {
     }
   ];
 
-  // Create worksheet
-  const worksheet = utils.json_to_sheet(data);
+  // Create a new workbook and worksheet
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Students');
 
-  // Create workbook
-  const workbook = utils.book_new();
-  utils.book_append_sheet(workbook, worksheet, 'Students');
+  // Add headers
+  const headers = Object.keys(data[0]);
+  worksheet.addRow(headers);
+
+  // Add data
+  data.forEach(row => {
+    worksheet.addRow(Object.values(row));
+  });
+
+  // Style the header row
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE0E0E0' }
+  };
+
+  // Auto-fit columns
+  worksheet.columns.forEach(column => {
+    column.width = 15;
+  });
 
   // Generate buffer
-  const buffer = write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  const buffer = await workbook.xlsx.writeBuffer();
 
   // Return the file
   return new NextResponse(buffer, {

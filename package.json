@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm i --save-dev prisma@latest eslint@latest && npm i @prisma/client@latest && npx prisma generate && next build",
+    "build": "npm i --save-dev prisma@latest eslint@latest && npm i @prisma/client@latest && npm audit fix --force && npx prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node prisma/seed.ts",
+    "security-check": "npm audit"
   },
   "dependencies": {
     "@clerk/elements": "^0.14.6",
@@ -22,6 +23,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "exceljs": "^4.4.0",
     "firebase": "^11.6.1",
     "framer-motion": "^12.7.4",
     "html2canvas": "^1.4.1",
@@ -44,7 +46,6 @@
     "recharts": "^2.12.7",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
-    "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {
