@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm i --save-dev prisma@latest eslint@latest && npm i @prisma/client@latest && npm audit fix --force && npx prisma generate && next build",
+    "build": "npm i --save-dev prisma@latest eslint@8.57.1 --legacy-peer-deps && npm i @prisma/client@latest --legacy-peer-deps && npx prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
@@ -53,7 +53,7 @@
     "@types/node": "^20.17.28",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "eslint": "^8",
+    "eslint": "^8.57.1",
     "eslint-config-next": "14.2.5",
     "postcss": "^8",
     "prisma": "^6.6.0",
