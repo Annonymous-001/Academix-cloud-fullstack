@@ -1479,7 +1479,7 @@ export const createAttendance = async (
       data: {
         date: data.date,
         studentId: data.studentId,
-        classId: data.classId,
+        // classId: data.classId,
         lessonId: data.lessonId || undefined,
         inTime: new Date(),
         outTime: null,
