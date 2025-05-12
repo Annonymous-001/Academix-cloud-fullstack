@@ -1,3 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
-const { sessionClaims } = auth();
- export  const role = (sessionClaims?.metadata as { role?: string })?.role;
+
+export function getUserAuth() {
+  const { userId, sessionClaims } = auth();
+  return {
+    userId,
+    role: (sessionClaims?.metadata as { role?: string })?.role,
+    
+  };
+}
