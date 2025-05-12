@@ -10,45 +10,56 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Academix Cloud",
   description: "Next.js School Management System",
-  icons:{
-    icon:"./favicon.ico"
-  }
+  icons: {
+    icon: "./favicon.ico",
+  },
 };
-export const dynamic = 'force-dynamic';
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        variables: {
+          colorPrimary: "#3b82f6",
+          colorText: "#1e293b",
+          colorTextSecondary: "#64748b",
+          colorBackground: "#ffffff",
+          colorInputBackground: "#f8fafc",
+        },
+        elements: {
+          formButtonPrimary: "bg-blue-500 hover:bg-blue-600",
+          socialButtonsBlockButton: "border-gray-200 hover:bg-gray-50",
+          card: "shadow-lg rounded-2xl",
+          headerTitle: "text-slate-800",
+          headerSubtitle: "text-slate-500",
+          dividerLine: "bg-gray-200",
+          dividerText: "text-gray-400",
+          formFieldLabel: "text-slate-700",
+          footerActionText: "text-slate-500",
+        },
+      }}
+    >
+      <html lang="en">
+        <body className={inter.className}>
           {children}
-          <ToastContainer 
+          <ToastContainer
             position="bottom-center"
-            theme="dark"
-            limit={1}
+            theme="light"
             autoClose={3000}
             hideProgressBar={false}
             newestOnTop
             closeOnClick
-            rtl={false}
             pauseOnFocusLoss
             draggable
             pauseOnHover
-            style={{
-              width: 'auto',
-              maxWidth: '90%',
-              fontSize: '14px',
-              padding: '8px 16px',
-              margin: '0 auto',
-              borderRadius: '8px',
-            }}
+            className="text-sm"
           />
-        </ClerkProvider>
-      </body>
-    </html>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
