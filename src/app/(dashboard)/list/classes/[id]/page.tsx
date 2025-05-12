@@ -5,12 +5,13 @@ import prisma from "@/lib/prisma";
 import Table from "@/components/Table";
 import FormContainer from "@/components/FormContainer";
 
-const ClassDetailPage = async ({ params }: { params: { id: string } }) => {
+const ClassDetailPage = async (props: { params: Promise<{ id: string }> }) => {
+  const params = await props.params;
   const { sessionClaims } = auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
-  
+
   const classId = parseInt(params.id);
-  
+
   // Fetch class with related data
   const classData = await prisma.class.findUnique({
     where: {

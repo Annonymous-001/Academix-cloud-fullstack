@@ -7,11 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Download, Receipt } from "lucide-react";
 import Link from "next/link";
 
-const StudentFeesPage = async ({
-  params: { id },
-}: {
-  params: { id: string };
-}) => {
+const StudentFeesPage = async (
+  props: {
+    params: Promise<{ id: string }>;
+  }
+) => {
+  const params = await props.params;
+
+  const {
+    id
+  } = params;
+
   const { role } = getUserAuth();
 
   const student = await prisma.student.findUnique({

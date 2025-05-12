@@ -10,11 +10,12 @@ import { auth } from "@clerk/nextjs/server";
 
 type EventList = Event & { class: Class | null };
 
-const EventListPage = async ({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | undefined };
-}) => {
+const EventListPage = async (
+  props: {
+    searchParams: Promise<{ [key: string]: string | undefined }>;
+  }
+) => {
+  const searchParams = await props.searchParams;
   const { userId, sessionClaims } = auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
   const currentUserId = userId;

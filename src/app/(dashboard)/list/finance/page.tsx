@@ -7,11 +7,12 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Finance } from "@prisma/client";
 import { auth } from "@clerk/nextjs/server";
 
-const FinanceListPage = async ({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | undefined };
-}) => {
+const FinanceListPage = async (
+  props: {
+    searchParams: Promise<{ [key: string]: string | undefined }>;
+  }
+) => {
+  const searchParams = await props.searchParams;
   const { userId, sessionClaims } = auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
 

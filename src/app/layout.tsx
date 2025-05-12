@@ -22,10 +22,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en">
-        <body className={inter.className}>
-          {children} <ToastContainer 
+    <html lang="en">
+      <body className={inter.className}>
+        <ClerkProvider>
+          {children}
+          <ToastContainer 
             position="bottom-center"
             theme="dark"
             limit={1}
@@ -46,8 +47,8 @@ export default function RootLayout({
               borderRadius: '8px',
             }}
           />
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }

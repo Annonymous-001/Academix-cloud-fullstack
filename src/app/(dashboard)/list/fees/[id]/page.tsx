@@ -8,11 +8,17 @@ import Link from "next/link";
 import { FeeStatus } from "@prisma/client";
 import FormContainer from "@/components/FormContainer";
 
-const FeeDetailsPage = async ({
-  params: { id },
-}: {
-  params: { id: string };
-}) => {
+const FeeDetailsPage = async (
+  props: {
+    params: Promise<{ id: string }>;
+  }
+) => {
+  const params = await props.params;
+
+  const {
+    id
+  } = params;
+
   const { role } = getUserAuth();
 
   const fee = await prisma.fee.findUnique({

@@ -16,17 +16,18 @@ type AssignmentList = Assignment & {
   };
 };
 
-const AssignmentListPage = async ({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | undefined };
-}) => {
+const AssignmentListPage = async (
+  props: {
+    searchParams: Promise<{ [key: string]: string | undefined }>;
+  }
+) => {
+  const searchParams = await props.searchParams;
 
   const { userId, sessionClaims } = auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
   const currentUserId = userId;
-  
-  
+
+
   const columns = [
     {
       header: "Subject Name",
@@ -55,7 +56,7 @@ const AssignmentListPage = async ({
         ]
       : []),
   ];
-  
+
   const renderRow = (item: AssignmentList) => (
     <tr
       key={item.id}

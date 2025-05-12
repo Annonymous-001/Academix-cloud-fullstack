@@ -2,7 +2,7 @@
 
 import { StudentIDCard } from '@/components/StudentIDCard';
 import html2pdf from 'html2pdf.js';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, use } from 'react';
 import { getStudentIdCardData } from '@/lib/actions';
 
 type StudentWithDetails = {
@@ -29,13 +29,14 @@ type StudentWithDetails = {
   } | null;
 };
 
-export default function IDCardPage({ params }: { params: { id: string } }) {
+export default function IDCardPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [student, setStudent] = useState<StudentWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
-  
+
   const currentYear = new Date().getFullYear();
   const schoolYear = `${currentYear}-${currentYear + 1}`;
   const expiryDate = `31/07/${currentYear + 1}`;

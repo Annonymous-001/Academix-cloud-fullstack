@@ -2,7 +2,7 @@
 
 import { ReportCard } from '@/components/ReportCard';
 import html2pdf from 'html2pdf.js';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { getStudentReportData } from '@/lib/actions';
 import { Exam, Result } from '@prisma/client';
 
@@ -26,7 +26,8 @@ type StudentWithResults = {
   })[];
 };
 
-export default function ReportCardPage({ params }: { params: { id: string } }) {
+export default function ReportCardPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [student, setStudent] = useState<StudentWithResults | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

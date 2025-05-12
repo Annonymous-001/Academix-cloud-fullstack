@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import html2pdf from 'html2pdf.js';
 import { format } from 'date-fns';
 import { Fee, Payment, Student } from '@prisma/client';
@@ -16,7 +16,8 @@ type FeeWithDetails = Fee & {
   payments: Payment[];
 };
 
-export default function ReceiptPage({ params }: { params: { id: string } }) {
+export default function ReceiptPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [fee, setFee] = useState<FeeWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
