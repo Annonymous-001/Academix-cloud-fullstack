@@ -7,9 +7,9 @@ const matchers = Object.entries(routeAccessMap).map(([route, allowedRoles]) => (
   matcher: createRouteMatcher([route]),
   allowedRoles,
 }));
-
-export default clerkMiddleware((auth, req) => {
-  const { sessionClaims } = auth();
+export default clerkMiddleware(async (auth, req) => {
+  const authObject = await auth();
+  const sessionClaims = authObject.sessionClaims;
 
   // Extract the user's role from session claims
   const role = (sessionClaims?.metadata as { role?: string })?.role;

@@ -7,8 +7,8 @@ import FormContainer from "@/components/FormContainer";
 
 const ClassDetailPage = async (props: { params: Promise<{ id: string }> }) => {
   const params = await props.params;
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const session = await auth();
+  const role = (session.sessionClaims?.metadata as { role?: string })?.role;
 
   const classId = parseInt(params.id);
 

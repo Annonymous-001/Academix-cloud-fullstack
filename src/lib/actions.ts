@@ -24,8 +24,6 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { calculateFeeStatus } from "./feeHelpers";
 import { revalidatePath } from "next/cache";
 
-const clerk=clerkClient();
-
 type CurrentState = { success: boolean; error: boolean };
 
 export const createSubject = async (
@@ -181,7 +179,7 @@ export const createTeacher = async (
     }
   
     // Create user in Clerk
-    const user = await clerk.users.createUser({
+    const user = await (await clerkClient()).users.createUser({
       emailAddress: data.email ? [data.email] : [], // Clerk requires an array
       username: data.username,
       password: data.password,
@@ -222,7 +220,7 @@ export const createTeacher = async (
       console.error("Prisma error:", prismaError);
 
       // Rollback - Delete user from Clerk if Prisma fails
-      await clerk.users.deleteUser(user.id);
+      await (await clerkClient()).users.deleteUser(user.id);
       console.log("Clerk user deleted due to Prisma failure:", user.id);
 
       return { success: false, error: true, message: prismaError.message };
@@ -242,7 +240,7 @@ export const updateTeacher = async (
     return { success: false, error: true };
   }
   try {
-    const user = await clerk.users.updateUser(data.id, {
+    const user = await (await clerkClient()).users.updateUser(data.id, {
       username: data.username,
       ...(data.password !== "" && { password: data.password }),
       firstName: data.name,
@@ -252,13 +250,12 @@ export const updateTeacher = async (
       where: { id: data.id },
       select: { img: true }
     });
-console.log("teacher updated in clerk ",user.id)
+    console.log("teacher updated in clerk ",user.id)
     await prisma.teacher.update({
       where: {
         id: data.id,
       },
       data: {
-        // ...(data.password !== "" && { password: data.password }),
         username: data.username,
         name: data.name,
         surname: data.surname,
@@ -291,7 +288,7 @@ export const deleteTeacher = async (
   const id = data.get("id") as string;
   console.log(id);
   try {
-    await clerk.users.deleteUser(id);
+    await (await clerkClient()).users.deleteUser(id);
     const teacherExists = await prisma.teacher.findUnique({
       where: { id: id },
     });
@@ -343,7 +340,7 @@ export const createStudent = async (
     const studentId = `${dateString}${nameInitials}${randomDigits}`;
 
     // Create user in Clerk
-    const user = await clerk.users.createUser({
+    const user = await (await clerkClient()).users.createUser({
       emailAddress: data.email ? [data.email] : [],
       username: data.username,
       password: data.password,
@@ -363,7 +360,6 @@ export const createStudent = async (
           username: data.username,
           name: data.name,
           surname: data.surname,
-          // Add new fields
           motherName: data.motherName,
           fatherName: data.fatherName,
           IEMISCODE: data.IEMISCODE,
@@ -387,7 +383,7 @@ export const createStudent = async (
       console.error("Prisma error:", prismaError);
 
       // Rollback - Delete user from Clerk if Prisma fails
-      await clerk.users.deleteUser(user.id);
+      await (await clerkClient()).users.deleteUser(user.id);
       console.log("Clerk user deleted due to Prisma failure:", user.id);
 
       return { success: false, error: true, message: prismaError.message };
@@ -406,7 +402,7 @@ export const updateStudent = async (
     return { success: false, error: true };
   }
   try {
-    const user = await clerk.users.updateUser(data.id, {
+    const user = await (await clerkClient()).users.updateUser(data.id, {
       username: data.username,
       ...(data.password !== "" && { password: data.password }),
       firstName: data.name,
@@ -426,7 +422,6 @@ export const updateStudent = async (
         username: data.username,
         name: data.name,
         surname: data.surname,
-        // Add new fields in update
         motherName: data.motherName,
         fatherName: data.fatherName,
         IEMISCODE: data.IEMISCODE,
@@ -457,7 +452,7 @@ export const deleteStudent = async (
   const id = data.get("id") as string;
 
   try {
-    await clerk.users.deleteUser(id);
+    await (await clerkClient()).users.deleteUser(id);
     
     const studentExists = await prisma.student.findUnique({
       where: { id: id },
@@ -957,7 +952,7 @@ export const createParent = async (
 
     // Create user in Clerk
     console.log("Creating user in Clerk...");
-    const user = await clerk.users.createUser({
+    const user = await (await clerkClient()).users.createUser({
       emailAddress: [data.email],
       username: data.username,
       password: data.password,
@@ -1011,7 +1006,7 @@ export const createParent = async (
       console.error("Prisma error:", prismaError);
 
       // Rollback - Delete user from Clerk if Prisma fails
-      await clerk.users.deleteUser(user.id);
+      await (await clerkClient()).users.deleteUser(user.id);
       console.log("Clerk user deleted due to Prisma failure:", user.id);
 
       return { success: false, error: true, message: prismaError.message };
@@ -1037,7 +1032,7 @@ export const updateParent = async (
 
     // Update user in Clerk
     console.log("Updating user in Clerk...");
-    const user = await clerk.users.updateUser(data.id, {
+    const user = await (await clerkClient()).users.updateUser(data.id, {
       username: data.username,
       firstName: data.name,
       lastName: data.surname,
@@ -1152,7 +1147,7 @@ export const deleteParent = async (
     }
 
     // Delete from Clerk
-    await clerk.users.deleteUser(id);
+    await (await clerkClient()).users.deleteUser(id);
 
     // Then delete the parent from database
     await prisma.parent.delete({
@@ -1174,7 +1169,7 @@ export const createAccountant = async (
     console.log("Creating accountant...");
     
     // Create Clerk user
-    const user = await clerk.users.createUser({
+    const user = await (await clerkClient()).users.createUser({
       emailAddress: data.email ? [data.email] : [],
       username: data.username,
       password: data.password,
@@ -1214,7 +1209,7 @@ export const updateAccountant = async (
     console.log("Updating accountant...");
     
     // Update Clerk user
-    await clerk.users.updateUser(data.id, {
+    await (await clerkClient()).users.updateUser(data.id, {
       username: data.username,
       firstName: data.name,
       lastName: data.surname,
@@ -1255,7 +1250,7 @@ export const deleteAccountant = async (
     });
 
     // Delete Clerk user
-    await clerk.users.deleteUser(id);
+    await (await clerkClient()).users.deleteUser(id);
 
     return { success: true, error: false };
   } catch (err: any) {

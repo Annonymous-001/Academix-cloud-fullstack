@@ -11,8 +11,8 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@clerk/elements": "^0.14.6",
-    "@clerk/nextjs": "^5.7.5",
+    "@clerk/elements": "^0.23.25",
+    "@clerk/nextjs": "^6.19.2",
     "@hookform/resolvers": "^3.9.0",
     "@prisma/client": "^6.6.0",
     "@radix-ui/react-dialog": "^1.1.6",

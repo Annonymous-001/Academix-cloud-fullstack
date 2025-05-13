@@ -13,7 +13,8 @@ const FinanceListPage = async (
   }
 ) => {
   const searchParams = await props.searchParams;
-  const { userId, sessionClaims } = auth();
+  const session = await auth();
+  const sessionClaims = session.sessionClaims;
   const role = (sessionClaims?.metadata as { role?: string })?.role;
 
   const columns = [

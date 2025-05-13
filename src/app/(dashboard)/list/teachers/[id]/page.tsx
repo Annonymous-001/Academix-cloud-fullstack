@@ -20,9 +20,9 @@ const SingleTeacherPage = async (
     id
   } = params;
 
-  const { sessionClaims } = auth();
+  const session = await auth();
+  const sessionClaims = session.sessionClaims;
   const role = (sessionClaims?.metadata as { role?: string })?.role;
-
   const teacher:
     | (Teacher & {
         _count: { subjects: number; lessons: number; classes: number };

@@ -22,9 +22,9 @@ const SingleStudentPage = async (
     id
   } = params;
 
-  const { sessionClaims } = auth();
+  const session = await auth();
+  const sessionClaims = session.sessionClaims;
   const role = (sessionClaims?.metadata as { role?: string })?.role;
-
   const student:
     | (Student & {
         class: Class & { _count: { lessons: number } };

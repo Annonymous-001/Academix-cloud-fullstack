@@ -36,9 +36,10 @@ export const FormContainer = async ({
 }: FormContainerProps) => {
   let relatedData = {};
 
-  const { userId, sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const session = await auth();
+  const userId = session.userId;
   const currentUserId = userId;
+  const role = (session.sessionClaims?.metadata as { role?: string })?.role;
 
   if (type !== "delete") {
     switch (table) {

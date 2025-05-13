@@ -18,9 +18,8 @@ const ClassListPage = async (
 ) => {
   const searchParams = await props.searchParams;
 
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-
+  const session = await auth();
+  const role = (session.sessionClaims?.metadata as { role?: string })?.role;
 
   const columns = [
     {

@@ -18,7 +18,7 @@ const StudentFeesPage = async (
     id
   } = params;
 
-  const { role } = getUserAuth();
+  const { role } = await getUserAuth();
 
   const student = await prisma.student.findUnique({
     where: { id },

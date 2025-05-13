@@ -19,7 +19,7 @@ const FeeDetailsPage = async (
     id
   } = params;
 
-  const { role } = getUserAuth();
+  const { role } = await getUserAuth();
 
   const fee = await prisma.fee.findUnique({
     where: { id: parseInt(id) },

@@ -20,10 +20,11 @@ const FeesListPage = async (
   }
 ) => {
   const searchParams = await props.searchParams;
-  const { userId, sessionClaims } = auth();
+  const session = await auth();
+  const userId = session.userId;
+  const sessionClaims = session.sessionClaims;
   const role = (sessionClaims?.metadata as { role?: string })?.role;
   const currentUserId = userId;
-
   // --- Fetch all fees for summary cards ---
   const allFees = await prisma.fee.findMany({
     include: { student: true },
