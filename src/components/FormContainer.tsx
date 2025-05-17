@@ -2,8 +2,32 @@ import prisma from "@/lib/prisma";
 import FormModal from "./FormModal";
 import { auth } from "@clerk/nextjs/server";
 import { Class, Lesson, Student } from "@prisma/client";
+import dynamic from "next/dynamic";
+import { Dispatch, SetStateAction } from "react";
 
 type ClassSelect = Pick<Class, 'id' | 'name'>;
+
+const TeacherAttendanceForm = dynamic(() => import("./forms/TeacherattendanceForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+
+const forms: {
+  [key: string]: (
+    setOpen: Dispatch<SetStateAction<boolean>>,
+    type: "create" | "update",
+    data?: any,
+    relatedData?: any
+  ) => JSX.Element;
+} = {
+  teacherattendance: (setOpen, type, data, relatedData) => (
+    <TeacherAttendanceForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+};
 
 export type FormContainerProps = {
   table:
@@ -22,6 +46,7 @@ export type FormContainerProps = {
     | "fee"
     | "payment"
     | "finance"
+    | "teacherattendance"
   type: "create" | "update" | "delete";
   data?: any;
   id?: number | string;
@@ -308,6 +333,12 @@ export const FormContainer = async ({
           lessons: availableLessons,
           students: availableStudents
         };
+        break;
+      case "teacherattendance":
+        const teacherAttendanceTeachers = await prisma.teacher.findMany({
+          select: { id: true, name: true, surname: true },
+        });
+        relatedData = { teachers: teacherAttendanceTeachers };
         break;
     }
   }

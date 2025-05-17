@@ -248,3 +248,25 @@ export const financeSchema = z.object({
 });
 
 export type FinanceSchema = z.infer<typeof financeSchema>;
+
+export const teacherAttendanceSchema = z.object({
+  id: z.coerce.number().optional(),
+  teacherId: z.string().min(1, { message: "Teacher is required!" }),
+  date: z.coerce.date({ message: "Date is required!" }),
+  status: z.enum(["PRESENT", "ABSENT", "LATE"], {
+    message: "Status is required!",
+  }),
+  inTime: z.string().optional(),
+  outTime: z.string().optional(),
+}).refine((data) => {
+  // If status is ABSENT, inTime and outTime should be undefined
+  if (data.status === "ABSENT") {
+    return !data.inTime && !data.outTime;
+  }
+  return true;
+}, {
+  message: "In/Out time should not be set for absent status",
+  path: ["status"]
+});
+
+export type TeacherAttendanceSchema = z.infer<typeof teacherAttendanceSchema>;

@@ -12,6 +12,27 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { CldUploadWidget } from "next-cloudinary";
 
+const createWrapper = async (state: { success: boolean; error: boolean }, formData: StudentSchema & { img?: string }) => {
+  try {
+    await createStudent({ success: false, error: false, message: "" }, formData);
+    return { success: true, error: false };
+  } catch (error) {
+    return { success: false, error: true };
+  }
+};
+
+const updateWrapper = async (state: { success: boolean; error: boolean }, formData: StudentSchema & { img?: string }) => {
+  try {
+    if (!formData.id) {
+      return { success: false, error: true };
+    }
+    await updateStudent({ success: false, error: false, message: "" }, formData);
+    return { success: true, error: false };
+  } catch (error) {
+    return { success: false, error: true };
+  }
+};
+
 const StudentForm = ({
   type,
   data,
@@ -34,15 +55,15 @@ const StudentForm = ({
   const [img, setImg] = useState<any>();
 
   const [state, formAction] = useFormState(
-    type === "create" ? createStudent : updateStudent,
+    type === "create" ? createWrapper : updateWrapper,
     {
       success: false,
       error: false,
     }
   );
 
-  const onSubmit = handleSubmit((data) => {
-    formAction({ ...data, img: img?.secure_url });
+  const onSubmit = handleSubmit((formData) => {
+    formAction({ ...formData, img: img?.secure_url });
   });
 
   const router = useRouter();

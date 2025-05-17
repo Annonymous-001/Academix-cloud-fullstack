@@ -15,7 +15,8 @@ import {
   deleteFee,
   deletePayment,
   deleteAttendance,
-  deleteFinance
+  deleteFinance,
+  deleteTeacherAttendance
 } from "@/lib/actions";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -42,7 +43,8 @@ const deleteActionMap = {
   fee: deleteFee,
   payment: deletePayment,
   attendence: deleteAttendance,
-  finance: deleteFinance
+  finance: deleteFinance,
+  teacherattendance: deleteTeacherAttendance
  }
 
 // USE LAZY LOADING
@@ -93,6 +95,9 @@ const AttendanceForm = dynamic(() => import("./forms/AttendanceForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 const FinanceForm = dynamic(() => import("./forms/financeForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const TeacherAttendanceForm = dynamic(() => import("./forms/TeacherattendanceForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 // TODO: OTHER FORMS
@@ -222,6 +227,14 @@ const forms: {
       type={type}
       data={data}
       setOpen={setOpen}
+    />
+  ),
+  teacherattendance: (setOpen, type, data, relatedData) => (
+    <TeacherAttendanceForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
     />
   ),
 };

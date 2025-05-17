@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "TeacherAttendance" ALTER COLUMN "inTime" SET DATA TYPE TEXT,
+ALTER COLUMN "outTime" SET DATA TYPE TEXT;

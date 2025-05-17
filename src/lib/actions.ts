@@ -24,7 +24,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { calculateFeeStatus } from "./feeHelpers";
 import { revalidatePath } from "next/cache";
 
-type CurrentState = { success: boolean; error: boolean };
+type CurrentState = { success: boolean; error: boolean; message?: string };
 
 export const createSubject = async (
   currentState: CurrentState,
@@ -1760,6 +1760,114 @@ export const deleteFinance = async (
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
+    return { success: false, error: true };
+  }
+};
+
+export const createTeacherAttendance = async (
+  currentState: CurrentState,
+  data: {
+    teacherId: string;
+    date: Date;
+    status: "PRESENT" | "ABSENT" | "LATE";
+    inTime?: Date;
+    outTime?: Date;
+  }
+) => {
+  try {
+    // Check if attendance already exists for this teacher on this date
+    const existingAttendance = await prisma.teacherAttendance.findFirst({
+      where: {
+        teacherId: data.teacherId,
+        date: data.date,
+      },
+    });
+
+    if (existingAttendance) {
+      return {
+        success: false,
+        error: true,
+        message: "Attendance already marked for this date"
+      };
+    }
+
+    // Create new attendance record
+    await prisma.teacherAttendance.create({
+      data: {
+        teacherId: data.teacherId,
+        date: data.date,
+        status: data.status,
+        inTime: data.inTime?.toISOString() || null,
+        outTime: data.outTime?.toISOString() || null,
+      },
+    });
+
+    revalidatePath("/list/teacherattendance");
+    return {
+      success: true,
+      error: false,
+      message: "Attendance marked successfully"
+    };
+  } catch (err) {
+    console.log(err);
+    return {
+      success: false,
+      error: true,
+      message: "Failed to mark attendance"
+    };
+  }
+};
+
+export const updateTeacherAttendance = async (
+  currentState: CurrentState,
+  data: {
+    id?: number;
+    teacherId: string;
+    date: Date;
+    status: "PRESENT" | "ABSENT" | "LATE";
+    inTime?: Date;
+    outTime?: Date;
+  }
+) => {
+  if (!data.id) {
+    return { success: false, error: true, message: "ID is required for update" };
+  }
+  try {
+    await prisma.teacherAttendance.update({
+      where: { id: data.id },
+      data: {
+        date: data.date,
+        teacherId: data.teacherId,
+        inTime: data.inTime?.toISOString() || null,
+        outTime: data.outTime?.toISOString() || null,
+        status: data.status
+      }
+    });
+    revalidatePath("/list/teacherattendance");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error(err);
+    return { success: false, error: true };
+  }
+};
+
+export const deleteTeacherAttendance = async (
+  currentState: CurrentState,
+  data: FormData
+) => {
+  const id = data.get("id");
+  if (!id || isNaN(Number(id))) {
+    return { success: false, error: true, message: "Invalid ID" };
+  }
+
+  try {
+    await prisma.teacherAttendance.delete({
+      where: { id: Number(id) }
+    });
+    revalidatePath("/list/teacherattendance");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("Delete Teacher Attendance Error:", err);
     return { success: false, error: true };
   }
 };
