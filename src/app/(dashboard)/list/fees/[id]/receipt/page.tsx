@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import html2pdf from 'html2pdf.js';
 import { format } from 'date-fns';
 import { Fee, Payment, Student } from '@prisma/client';
@@ -16,18 +16,19 @@ type FeeWithDetails = Fee & {
   payments: Payment[];
 };
 
-export default function ReceiptPage(props: { params: Promise<{ id: string }> }) {
-  const params = use(props.params);
+export default function ReceiptPage(props: { params: { id: string } }) {
+  const { id } = props.params;
   const [fee, setFee] = useState<FeeWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchFeeData() {
       try {
         setLoading(true);
-        const data = await getFeeReceiptData(params.id);
+        const data = await getFeeReceiptData(id);
         setFee(data);
       } catch (error) {
         console.error('Error fetching fee data:', error);
@@ -38,12 +39,12 @@ export default function ReceiptPage(props: { params: Promise<{ id: string }> }) 
     }
 
     fetchFeeData();
-  }, [params.id]);
+  }, [id]);
 
   const handleDownload = async () => {
     try {
       setIsGenerating(true);
-      const element = document.getElementById('fee-receipt');
+      const element = receiptRef.current;
       
       if (!element) {
         throw new Error('Receipt element not found');
@@ -64,14 +65,14 @@ export default function ReceiptPage(props: { params: Promise<{ id: string }> }) 
       );
       
       // Add a delay to ensure rendering is complete
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       const opt = {
-        margin: [0.2, 0.2],
+        margin: [0, 0],
         filename: `fee_receipt_${fee?.id}.pdf`,
         image: { 
           type: 'jpeg', 
-          quality: 0.98
+          quality: 1
         },
         html2canvas: { 
           scale: 2,
@@ -80,13 +81,16 @@ export default function ReceiptPage(props: { params: Promise<{ id: string }> }) 
           logging: false,
           letterRendering: true,
           imageTimeout: 0,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          windowWidth: 1200,
+          windowHeight: 1600
         },
         jsPDF: { 
           unit: 'in', 
           format: 'letter',
           orientation: 'portrait',
-          compress: true
+          compress: true,
+          hotfixes: ["px_scaling"]
         }
       };
       
@@ -133,7 +137,7 @@ export default function ReceiptPage(props: { params: Promise<{ id: string }> }) 
     <div className="p-4 bg-gray-100 min-h-screen">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold mb-4 text-center">Fee Receipt</h1>
-        <div id="fee-receipt" className="bg-white rounded-lg shadow-xl overflow-hidden">
+        <div ref={receiptRef} className="bg-white rounded-lg shadow-xl overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4">
             <div className="flex items-center justify-between">

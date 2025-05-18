@@ -1,9 +1,9 @@
 'use client';
 
 import { StudentIDCard } from '@/components/StudentIDCard';
-import html2pdf from 'html2pdf.js';
-import { useEffect, useState, useRef, use } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getStudentIdCardData } from '@/lib/actions';
+import html2pdf from 'html2pdf.js';
 
 type StudentWithDetails = {
   id: string;
@@ -29,8 +29,8 @@ type StudentWithDetails = {
   } | null;
 };
 
-export default function IDCardPage(props: { params: Promise<{ id: string }> }) {
-  const params = use(props.params);
+export default function IDCardPage(props: { params: { id: string } }) {
+  const { id } = props.params;
   const [student, setStudent] = useState<StudentWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export default function IDCardPage(props: { params: Promise<{ id: string }> }) {
     async function fetchStudentData() {
       try {
         setLoading(true);
-        const response = await getStudentIdCardData(params.id);
+        const response = await getStudentIdCardData(id);
         if (response.success && response.data) {
           setStudent(response.data);
         } else {
@@ -60,7 +60,7 @@ export default function IDCardPage(props: { params: Promise<{ id: string }> }) {
     }
 
     fetchStudentData();
-  }, [params.id]);
+  }, [id]);
 
   const handleDownload = async () => {
     try {
@@ -86,27 +86,29 @@ export default function IDCardPage(props: { params: Promise<{ id: string }> }) {
       );
       
       // Add a delay to ensure rendering is complete
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       const opt = {
-        margin: [0.1, 0.1],
+        margin: [0, 0],
         filename: `${student?.name}_${student?.surname}_id_card.pdf`,
         image: { 
           type: 'jpeg', 
-          quality: 0.98
+          quality: 1
         },
         html2canvas: { 
-          scale: 4, // Higher scale for better quality
+          scale: 2,
           useCORS: true,
           allowTaint: true,
           logging: false,
           letterRendering: true,
-          imageTimeout: 0, // No timeout for images
-          backgroundColor: '#ffffff'
+          imageTimeout: 0,
+          backgroundColor: '#ffffff',
+          windowWidth: 800,
+          windowHeight: 1200
         },
         jsPDF: { 
           unit: 'in', 
-          format: [3.375, 5.25], // Standard ID card size
+          format: [3.375, 5.25],
           orientation: 'portrait',
           compress: true,
           hotfixes: ["px_scaling"]

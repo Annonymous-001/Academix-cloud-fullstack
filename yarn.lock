@@ -1557,6 +1557,11 @@
   resolved "https://registry.npmjs.org/@types/date-arithmetic/-/date-arithmetic-4.1.4.tgz"
   integrity sha512-p9eZ2X9B80iKiTW4ukVj8B4K6q9/+xFtQ5MGYA5HWToY9nL4EkhV9+6ftT2VHpVMEZb5Tv00Iel516bVdO+yRw==
 
+"@types/file-saver@^2.0.7":
+  version "2.0.7"
+  resolved "https://registry.npmjs.org/@types/file-saver/-/file-saver-2.0.7.tgz"
+  integrity sha512-dNKVfHd/jk0SkR/exKGj2ggkB45MAkzvWCaqLUUgkyjITkGNzH8H+yUwr+BLJUBjZOe9w8X3wgmXhZDRg1ED6A==
+
 "@types/json5@^0.0.29":
   version "0.0.29"
   resolved "https://registry.npmjs.org/@types/json5/-/json5-0.0.29.tgz"
@@ -3147,6 +3152,11 @@ file-entry-cache@^6.0.1:
   integrity sha512-7Gps/XWymbLk2QLYK4NzpMOrYjMhdIxXuIvy2QBsLE6ljuodKvdkWs/cpyJJ3CVIVpH0Oi1Hvg1ovbMzLdFBBg==
   dependencies:
     flat-cache "^3.0.4"
+
+file-saver@^2.0.5:
+  version "2.0.5"
+  resolved "https://registry.npmjs.org/file-saver/-/file-saver-2.0.5.tgz"
+  integrity sha512-P9bmyZ3h/PRG+Nzga+rbdI4OEpNDzAVyy74uVO9ATgzLK6VtAsYybF/+TOCvrc0MO793d6+42lLyZTw7/ArVzA==
 
 fill-range@^7.1.1:
   version "7.1.1"

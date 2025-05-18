@@ -6,6 +6,7 @@ import { FeeStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Download, Receipt } from "lucide-react";
 import Link from "next/link";
+import FormContainer from "@/components/FormContainer";
 
 const StudentFeesPage = async (
   props: {
@@ -80,9 +81,7 @@ const StudentFeesPage = async (
             <Button variant="outline">Back to Student</Button>
           </Link>
           {role === "admin" && (
-            <Link href={`/list/fees/create?studentId=${student.id}`}>
-              <Button>Add New Fee</Button>
-            </Link>
+            <FormContainer table="fee" type="create" relatedData={{ studentId: student.id }} />
           )}
         </div>
       </div>
