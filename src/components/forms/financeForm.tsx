@@ -6,9 +6,10 @@ import InputField from "../InputField";
 import { financeSchema, FinanceSchema } from "@/lib/formValidationSchemas";
 import { createFinance, updateFinance } from "@/lib/actions";
 import { useFormState } from "react-dom";
-import { Dispatch, SetStateAction, useEffect } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
+import ErrorDisplay from "../ui/error-display";
 
 const FinanceForm = ({
   type,
@@ -27,33 +28,63 @@ const FinanceForm = ({
     resolver: zodResolver(financeSchema),
   });
 
+  const [loading, setLoading] = useState(false);
+  const [showError, setShowError] = useState(false);
+
   const [state, formAction] = useFormState(
     type === "create" ? createFinance : updateFinance,
     {
       success: false,
       error: false,
+      message: "",
+      details: null,
     }
   );
 
-  const onSubmit = handleSubmit((data) => {
-    formAction(data);
+  const onSubmit = handleSubmit(async (data) => {
+    setLoading(true);
+    setShowError(false);
+    await formAction(data);
+    setLoading(false);
   });
 
   const router = useRouter();
 
   useEffect(() => {
     if (state.success) {
-      toast(`Financial record has been ${type === "create" ? "created" : "updated"}!`);
+      toast.success(
+        `Financial record has been ${
+          type === "create" ? "created" : "updated"
+        }!`
+      );
       setOpen(false);
       router.refresh();
+    }
+    if (state.error) {
+      setShowError(true);
+      toast.error(state.message || "Something went wrong!");
+    }
+    if (state.success || state.error) {
+      setLoading(false);
     }
   }, [state, router, type, setOpen]);
 
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
-        {type === "create" ? "Create New Financial Record" : "Update Financial Record"}
+        {type === "create"
+          ? "Create New Financial Record"
+          : "Update Financial Record"}
       </h1>
+
+      {showError && state.error && (
+        <ErrorDisplay
+          error={state.details || state.message || "An error occurred"}
+          title="Error Details"
+          onClose={() => setShowError(false)}
+          className="mb-4"
+        />
+      )}
 
       <div className="flex flex-col gap-4">
         {data && (
@@ -112,11 +143,22 @@ const FinanceForm = ({
         </div>
       </div>
 
-      {state?.error && (
-        <span className="text-red-500">Something went wrong!</span>
-      )}
-      <button className="bg-blue-400 text-white p-2 rounded-md">
-        {type === "create" ? "Create Record" : "Update Record"}
+      <button
+        type="submit"
+        disabled={loading}
+        className={`p-2 rounded-md text-white transition ${
+          loading
+            ? "bg-blue-300 cursor-not-allowed"
+            : "bg-blue-400 hover:bg-blue-500"
+        }`}
+      >
+        {loading
+          ? type === "create"
+            ? "Creating..."
+            : "Updating..."
+          : type === "create"
+          ? "Create Record"
+          : "Update Record"}
       </button>
     </form>
   );

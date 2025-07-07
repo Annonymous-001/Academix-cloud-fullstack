@@ -16,7 +16,8 @@ import {
   deletePayment,
   deleteAttendance,
   deleteFinance,
-  deleteTeacherAttendance
+  deleteTeacherAttendance,
+  deleteAccountant,
 } from "@/lib/actions";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -44,7 +45,8 @@ const deleteActionMap = {
   payment: deletePayment,
   attendence: deleteAttendance,
   finance: deleteFinance,
-  teacherattendance: deleteTeacherAttendance
+  teacherattendance: deleteTeacherAttendance,
+  accountant: deleteAccountant,
  }
 
 // USE LAZY LOADING
@@ -98,6 +100,12 @@ const FinanceForm = dynamic(() => import("./forms/financeForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 const TeacherAttendanceForm = dynamic(() => import("./forms/TeacherattendanceForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const AccountantForm = dynamic(() => import("./forms/AccountantForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const BulkFeeForm = dynamic(() => import("./forms/BulkFeeForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 // TODO: OTHER FORMS
@@ -237,6 +245,20 @@ const forms: {
       relatedData={relatedData}
     />
   ),
+  accountant: (setOpen, type, data) => (
+    <AccountantForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+    />
+  ),
+  bulkFee: (setOpen, type, data, relatedData) => (
+    <BulkFeeForm
+      classId={relatedData?.classId}
+      className={relatedData?.className}
+      onSuccess={() => setOpen(false)}
+    />
+  ),
 };
 
 const FormModal = ({
@@ -265,7 +287,7 @@ const FormModal = ({
 
     useEffect(() => {
       if (state.success) {
-        toast(`${table} has been deleted!`);
+        toast.error(`${table} has been deleted!`);
         setOpen(false);
         router.refresh();
       }

@@ -11,6 +11,16 @@ import { createTeacher, updateTeacher } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { CldUploadWidget } from "next-cloudinary";
+import { ADToBS, BSToAD } from "bikram-sambat-js";
+import ErrorDisplay from "../ui/error-display";
+
+// Add this type definition after imports
+type FormState = {
+  success: boolean;
+  error: boolean;
+  message?: string;
+  details?: any;
+}
 
 const TeacherForm = ({
   type,
@@ -23,36 +33,116 @@ const TeacherForm = ({
   setOpen: Dispatch<SetStateAction<boolean>>;
   relatedData?: any;
 }) => {
+  console.log("TeacherForm props:", { type, data, relatedData });
+  
   const {
     register,
     handleSubmit,
     formState: { errors },
     setError,
+    setValue,
   } = useForm<TeacherSchema>({
     resolver: zodResolver(teacherSchema),
   });
 
   const [img, setImg] = useState<any>();
+  const [bsBirthday, setBsBirthday] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [showError, setShowError] = useState(false);
 
-  const [state, formAction] = useFormState(
-    type === "create" ? createTeacher : updateTeacher,
+  // Convert AD date to BS when component mounts or data changes
+  useEffect(() => {
+    if (data?.birthday) {
+      const adDate = new Date(data.birthday);
+      const year = adDate.getFullYear();
+      if (!isNaN(adDate.getTime()) && year >= 1913 && year <= 2043) {
+        const bsDate = ADToBS(adDate.toISOString().split('T')[0]);
+        setBsBirthday(bsDate);
+      } else {
+        setBsBirthday("");
+      }
+    }
+  }, [data]);
+
+  // Set existing image when updating
+  useEffect(() => {
+    if (type === "update" && data?.img) {
+      console.log("Setting existing image:", data.img);
+      setImg({ secure_url: data.img });
+    }
+  }, [data, type]);
+
+  // Set existing subjects when updating
+  useEffect(() => {
+    if (type === "update" && data?.subjects) {
+      console.log("Setting subjects:", data.subjects);
+      // Convert subjects array to array of IDs
+      const subjectIds = data.subjects.map((subject: any) => 
+        typeof subject === 'object' ? subject.id.toString() : subject.toString()
+      );
+      console.log("Subject IDs:", subjectIds);
+      setValue('subjects', subjectIds);
+    }
+  }, [data, type, setValue]);
+
+  // Handle BS date change
+  const handleBSDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const bsDate = e.target.value;
+    setBsBirthday(bsDate);
+    
+    // Convert BS date to AD and set form value
+    try {
+      const adDate = BSToAD(bsDate);
+      // Convert to ISO string and create a new Date object
+      const dateObj = new Date(adDate);
+      setValue('birthday', dateObj.toISOString());
+    } catch (error) {
+      console.error('Invalid BS date format');
+    }
+  };
+
+  const [state, formAction] = useFormState<FormState, TeacherSchema>(
+    async (_, data) => {
+      if (type === "create") {
+        return createTeacher({ success: false, error: false, message: "" }, data);
+      }
+      return updateTeacher({ success: false, error: false, message: "" }, data);
+    },
     {
       success: false,
       error: false,
+      message: "",
+      details: null,
     }
   );
 
   const onSubmit = handleSubmit(async (formData) => {
     try {
-      // Ensure email is in correct format for Clerk
-      const emailData = {
+      setLoading(true);
+      setShowError(false);
+      
+      console.log("Form data:", formData);
+      console.log("Teacher data:", data);
+      console.log("Type:", type);
+      
+      // Prepare the data for submission
+      const submitData = {
         ...formData,
-        email_address: formData.email, // Add email_address field required by Clerk
-        img: img?.secure_url
+        // Include the ID for updates
+        ...(type === "update" && data?.id && { id: data.id }),
+        // Handle image
+        img: img?.secure_url || data?.img,
+        // Ensure subjects is properly formatted
+        subjects: formData.subjects || []
       };
       
-      await formAction(emailData);
+      console.log("Submit data:", submitData);
+      
+      formAction(submitData);
     } catch (error: any) {
+      console.error("Form submission error:", error);
+      setLoading(false);
+      
       // Handle Clerk errors
       if (error.errors?.[0]) {
         const clerkError = error.errors[0];
@@ -64,6 +154,8 @@ const TeacherForm = ({
         } else {
           toast.error(clerkError.longMessage || 'Something went wrong');
         }
+      } else {
+        toast.error('An unexpected error occurred');
       }
     }
   });
@@ -71,13 +163,17 @@ const TeacherForm = ({
   const router = useRouter();
 
   useEffect(() => {
-    if (state.error) {
-      toast.error('Failed to save teacher. Please check all fields and try again.');
-    }
     if (state.success) {
       toast.success(`Teacher has been ${type === "create" ? "created" : "updated"}!`);
       setOpen(false);
       router.refresh();
+    }
+    if (state.error) {
+      setShowError(true);
+      toast.error(state.message || "Something went wrong!");
+    }
+    if (state.success || state.error) {
+      setLoading(false);
     }
   }, [state, router, type, setOpen]);
 
@@ -88,6 +184,16 @@ const TeacherForm = ({
       <h1 className="text-xl font-semibold">
         {type === "create" ? "Create a new teacher" : "Update the teacher"}
       </h1>
+
+      {showError && state.error && (
+        <ErrorDisplay
+          error={state.details || state.message || "An error occurred"}
+          title="Error Details"
+          onClose={() => setShowError(false)}
+          className="mb-4"
+        />
+      )}
+
       <span className="text-xs text-gray-400 font-medium">
         Authentication Information
       </span>
@@ -154,24 +260,21 @@ const TeacherForm = ({
           register={register}
           error={errors.bloodType}
         />
-        <InputField
-          label="Birthday"
-          name="birthday"
-          defaultValue={data?.birthday.toISOString().split("T")[0]}
-          register={register}
-          error={errors.birthday}
-          type="date"
-        />
-        {data && (
-          <InputField
-            label="Id"
-            name="id"
-            defaultValue={data?.id}
-            register={register}
-            error={errors?.id}
-            hidden
+        <div className="flex flex-col gap-2 w-full md:w-1/4">
+          <label className="text-xs text-gray-500">Birthday (BS)</label>
+          <input
+            type="text"
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+            placeholder="YYYY-MM-DD"
+            value={bsBirthday}
+            onChange={handleBSDateChange}
           />
-        )}
+          {errors.birthday?.message && (
+            <p className="text-xs text-red-400">
+              {errors.birthday.message.toString()}
+            </p>
+          )}
+        </div>
         <div className="flex flex-col gap-2 w-full md:w-1/4">
           <label className="text-xs text-gray-500">Sex</label>
           <select
@@ -208,46 +311,55 @@ const TeacherForm = ({
             </p>
           )}
         </div>
-        <CldUploadWidget
-  uploadPreset="school"
-  onSuccess={(result, { widget }) => {
-    setImg(result.info); // Store the image URL
-    widget.close();
-  }}
->
-  {({ open }) => {
-    return (
-      <div className="flex flex-col items-center gap-2">
-        <div
-          className="text-xs text-gray-500 flex items-center gap-2 cursor-pointer"
-          onClick={() => open()}
-        >
-          <Image src="/upload.png" alt="" width={28} height={28} />
-          <span>Upload a photo</span>
-        </div>
+        <div className="flex justify-center w-full">
+          <CldUploadWidget
+            uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "school"}
+            onSuccess={(result, { widget }) => {
+              setImg(result.info);
+              widget.close();
+            }}
+          >
+            {({ open }) => {
+              return (
+                <div className="flex flex-col items-center gap-2">
+                  <div
+                    className="text-xs text-gray-500 flex items-center gap-2 cursor-pointer"
+                    onClick={() => open()}
+                  >
+                    <Image src="/upload.png" alt="" width={28} height={28} />
+                    <span>Upload a photo</span>
+                  </div>
 
-        {/* Show Image Preview */}
-        {img && (
-          <div className="mt-2">
-            <Image
-              src={img.secure_url}
-              alt="Uploaded Image Preview"
-              width={100}
-              height={100}
-              className="rounded-lg border"
-            />
-          </div>
-        )}
+                  {img && (
+                    <div className="mt-2">
+                      <Image
+                        src={img.secure_url}
+                        alt="Uploaded Image Preview"
+                        width={100}
+                        height={100}
+                        className="rounded-lg border"
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            }}
+          </CldUploadWidget>
+        </div>
       </div>
-    );
-  }}
-</CldUploadWidget>
-      </div>
-      {state.error && (
-        <span className="text-red-500">Something went wrong!</span>
-      )}
-      <button className="bg-blue-400 text-white p-2 rounded-md">
-        {type === "create" ? "Create" : "Update"}
+      
+      <button
+        type="submit"
+        disabled={loading}
+        className={`${
+          loading ? "bg-gray-400" : "bg-blue-400"
+        } text-white p-2 rounded-md transition-colors`}
+      >
+        {loading
+          ? `${type === "create" ? "Creating" : "Updating"}...`
+          : type === "create"
+          ? "Create"
+          : "Update"}
       </button>
     </form>
   );

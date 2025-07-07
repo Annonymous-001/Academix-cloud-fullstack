@@ -10,7 +10,7 @@ export type SubjectSchema = z.infer<typeof subjectSchema>;
 
 export const classSchema = z.object({
   id: z.coerce.number().optional(),
-  name: z.string().min(1, { message: "Subject name is required!" }),
+  name: z.string().min(1, { message: "Class name is required!" }),
   capacity: z.coerce.number().min(1, { message: "Capacity name is required!" }),
   gradeId: z.coerce.number().min(1, { message: "Grade name is required!" }),
   supervisorId: z.coerce.string().optional(),
@@ -36,11 +36,14 @@ export const teacherSchema = z.object({
     .email({ message: "Invalid email address!" })
     .optional()
     .or(z.literal("")),
-    phone: z.string().min(1, { message: "Phone is required!" }),
+  phone: z.string().min(1, { message: "Phone is required!" }),
   address: z.string(),
   img: z.string().optional(),
   bloodType: z.string().min(1, { message: "Blood Type is required!" }),
-  birthday: z.coerce.date({ message: "Birthday is required!" }),
+  birthday: z.union([
+    z.string().min(1, { message: "Birthday is required!" }),
+    z.date().transform((date) => date.toISOString())
+  ]),
   sex: z.enum(["MALE", "FEMALE"], { message: "Sex is required!" }),
   subjects: z.array(z.string()).optional(), // subject ids
 });
@@ -80,6 +83,10 @@ export const studentSchema = z.object({
   classId: z.coerce.number().min(1, { message: "Class is required!" }),
   // Add disability field
   disability: z.enum(["NONE", "VISION", "HEARING", "MOBILITY", "COGNITIVE", "SPEECH", "MENTAL_HEALTH", "OTHER"]),
+  // Add StudentId field
+  StudentId: z.string().optional(),
+  // Add year field for academic year
+  year: z.coerce.number().min(2070, { message: "Year must be 2070 or later!" }).max(2090, { message: "Year must be 2090 or earlier!" }).default(2081),
   // parentId field remains optional
   parentId: z.string().optional()
 });
@@ -91,7 +98,8 @@ export const examSchema = z.object({
   title: z.string().min(1, { message: "Title name is required!" }),
   startTime: z.coerce.date({ message: "Start time is required!" }),
   endTime: z.coerce.date({ message: "End time is required!" }),
-  lessonId: z.coerce.number({ message: "Lesson is required!" }),
+  subjectId: z.coerce.number({ message: "Subject is required!" }),
+  classId: z.coerce.number({ message: "Class is required!" }),
 });
 
 export type ExamSchema = z.infer<typeof examSchema>;
@@ -175,6 +183,7 @@ export const parentSchema = z.object({
   surname: z.string().min(1, { message: "Last name is required!" }),
   phone: z.string().min(1, { message: "Phone is required!" }),
   address: z.string().min(1, { message: "Address is required!" }),
+  birthday: z.coerce.date({ message: "Birthday is required!" }),
   studentId: z.string().optional(),
   parentId: z.string().optional(),
 });
@@ -189,7 +198,10 @@ export const accountantSchema = z.object({
   email: z.string().email({ message: "Invalid email format!" }).optional().nullable(),
   phone: z.string().min(1, { message: "Phone is required!" }),
   address: z.string().min(1, { message: "Address is required!" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters!" }).optional(),
+  password: z.string().optional().or(z.literal("")).refine(
+    (val) => !val || val.length === 0 || val.length >= 6,
+    { message: "Password must be at least 6 characters!" }
+  ),
 });
 
 export type AccountantSchema = z.infer<typeof accountantSchema>;
@@ -197,7 +209,12 @@ export type AccountantSchema = z.infer<typeof accountantSchema>;
 export const feeSchema = z.object({
   id: z.coerce.number().optional(),
   studentId: z.string().min(1, "Student is required"),
-  totalAmount: z.coerce.number().positive("Amount must be positive"),
+  totalAmount: z
+    .union([
+      z.coerce.number().positive("Amount must be positive"),
+      z.literal("").transform(() => undefined)
+    ])
+    .optional(),
   paidAmount: z.coerce.number().optional(),
   dueDate: z.coerce.date({ required_error: "Due date is required" }),
   status: z.enum(["PAID", "UNPAID", "PARTIAL", "OVERDUE", "WAIVED"]),
@@ -270,3 +287,13 @@ export const teacherAttendanceSchema = z.object({
 });
 
 export type TeacherAttendanceSchema = z.infer<typeof teacherAttendanceSchema>;
+
+export const bulkFeeSchema = z.object({
+  classId: z.coerce.number().min(1, "Class is required"),
+  totalAmount: z.coerce.number().positive("Amount must be positive"),
+  dueDate: z.coerce.date({ required_error: "Due date is required" }),
+  description: z.string().optional(),
+  year: z.coerce.number().min(2070, { message: "Year must be 2070 or later!" }).max(2090, { message: "Year must be 2090 or earlier!" }).default(2081),
+});
+
+export type BulkFeeSchema = z.infer<typeof bulkFeeSchema>;

@@ -8,6 +8,7 @@ import { Teacher } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ADToBS } from "bikram-sambat-js";
 
 const SingleTeacherPage = async (
   props: {
@@ -26,6 +27,7 @@ const SingleTeacherPage = async (
   const teacher:
     | (Teacher & {
         _count: { subjects: number; lessons: number; classes: number };
+        subjects: { id: number; name: string }[];
       })
     | null = await prisma.teacher.findUnique({
     where: { id },
@@ -35,6 +37,12 @@ const SingleTeacherPage = async (
           subjects: true,
           lessons: true,
           classes: true,
+        },
+      },
+      subjects: {
+        select: {
+          id: true,
+          name: true,
         },
       },
     },
@@ -81,7 +89,21 @@ const SingleTeacherPage = async (
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
                   <Image src="/date.png" alt="" width={14} height={14} />
                   <span>
-                    {new Intl.DateTimeFormat("en-GB").format(teacher.birthday)}
+{(() => {
+  const adDate = new Date(teacher.birthday);
+  const year = adDate.getFullYear();
+  if (year >= 1913 && year <= 2043) {
+    return ADToBS(adDate.toISOString().split('T')[0]);
+  }
+  // Show as stored (remove time if you want just the date)
+  if (typeof teacher.birthday === 'string') {
+    return (teacher.birthday as string).split('T')[0].replace(' 00:00:00', '');
+  }
+  if (adDate instanceof Date && !isNaN(adDate.getTime())) {
+    return adDate.toISOString().split('T')[0];
+  }
+  return 'N/A';
+})()}
                   </span>
                 </div>
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">

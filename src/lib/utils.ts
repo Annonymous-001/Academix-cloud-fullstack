@@ -1,6 +1,6 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { BSToAD } from 'bikram-sambat-js'
 
 
 const getLatestMonday = (): Date => {
@@ -52,4 +52,36 @@ export const adjustScheduleToCurrentWeek = (
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+/**
+ * Converts a Bikram Sambat (BS) date to Anno Domini (AD) date
+ * @param bsDate - BS date in format "YYYY-MM-DD" or "YYYY/MM/DD"
+ * @returns AD date string in ISO format
+ */
+export function convertBSToAD(bsDate: string): string {
+  try {
+    // Normalize the date format to YYYY-MM-DD
+    const normalizedDate = bsDate.replace(/\//g, '-');
+    const adDate = BSToAD(normalizedDate);
+    return new Date(adDate).toISOString();
+  } catch (error) {
+    console.error('Error converting BS date to AD:', error);
+    throw new Error(`Invalid BS date format: ${bsDate}`);
+  }
+}
+
+/**
+ * Validates if a string is a valid BS date format
+ * @param dateString - Date string to validate
+ * @returns boolean indicating if the date is valid
+ */
+export function isValidBSDate(dateString: string): boolean {
+  try {
+    const normalizedDate = dateString.replace(/\//g, '-');
+    BSToAD(normalizedDate);
+    return true;
+  } catch {
+    return false;
+  }
 }

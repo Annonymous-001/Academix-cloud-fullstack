@@ -10,6 +10,9 @@ import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { useSwipeable } from "react-swipeable";
 import { motion, AnimatePresence } from "framer-motion";
+import BikramSambatDatePicker from "../BikramSambatDatePicker";
+import { BSToAD } from "bikram-sambat-js";
+import ErrorDisplay from "../ui/error-display";
 
 const StudentCard = ({ student, onSwipe }: { 
   student: any;
@@ -37,6 +40,10 @@ const StudentCard = ({ student, onSwipe }: {
     trackTouch: true
   });
 
+  const activeEnrollment = student.enrollments?.find(
+    (enr: any) => enr.leftAt === null
+  );
+
   return (
     <motion.div
       {...handlers}
@@ -58,7 +65,7 @@ const StudentCard = ({ student, onSwipe }: {
         <div className="relative z-10">
           <div className="text-center">
             <h2 className="text-2xl font-bold mb-2">{student.name} {student.surname}</h2>
-            <p className="text-gray-600 mb-1">{student.class?.name}</p>
+            <p className="text-gray-600 mb-1">{activeEnrollment?.class?.name || "N/A"}</p>
             <p className="text-gray-500">Roll No - {student.StudentId}</p>
           </div>
         </div>
@@ -93,6 +100,8 @@ const AttendanceForm = ({
   const [currentLessonId, setCurrentLessonId] = useState<string>("");
   const [processedStudents, setProcessedStudents] = useState<string[]>([]);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [errorState, setErrorState] = useState<{ message: string; details: any } | null>(null);
+  const [skippedStudents, setSkippedStudents] = useState<string[]>([]);
 
   const {
     handleSubmit,
@@ -113,8 +122,16 @@ const AttendanceForm = ({
   const classes = relatedData?.classes || [];
   const lessons = relatedData?.lessons || [];
   const students = (relatedData?.students || []).filter(
-    (student: any) => !processedStudents.includes(student.id) && 
-    (!currentClassId || student.classId === parseInt(currentClassId))
+    (student: any) => {
+      const activeEnrollment = student.enrollments?.find(
+        (enr: any) => enr.leftAt === null && (!currentClassId || enr.classId === parseInt(currentClassId))
+      );
+      return (
+        activeEnrollment &&
+        !processedStudents.includes(student.id) &&
+        !skippedStudents.includes(student.id)
+      );
+    }
   );
 
   const handleSwipe = async (direction: "left" | "right", studentId: string) => {
@@ -123,6 +140,7 @@ const AttendanceForm = ({
       return;
     }
 
+    setErrorState(null); // Clear previous errors
     const status = direction === "right" ? "PRESENT" : "ABSENT";
     const result = await createAttendance(
       { success: false, error: false },
@@ -140,12 +158,31 @@ const AttendanceForm = ({
       toast.success(`Marked ${status.toLowerCase()}`);
     } else {
       toast.error(result.message || "Failed to mark attendance");
+      setErrorState({ 
+        message: result.message || "An error occurred", 
+        details: result.details 
+      });
     }
+  };
+
+  const handleDateSelect = (date: { year: number; month: number; day: number }) => {
+    const bsDateString = `${date.year}-${date.month.toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}`;
+    const adDateString = BSToAD(bsDateString);
+    setCurrentDate(new Date(adDateString));
   };
 
   return (
     <div className="flex flex-col gap-8 p-4">
       <h1 className="text-xl font-semibold text-center">Mark Attendance</h1>
+
+      {errorState && (
+        <ErrorDisplay
+          error={errorState.details || errorState.message}
+          title="Attendance Error"
+          onClose={() => setErrorState(null)}
+          className="mb-4"
+        />
+      )}
 
       <div className="flex flex-col gap-4">
         <div className="w-full">
@@ -193,24 +230,29 @@ const AttendanceForm = ({
 
         <div className="w-full">
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-gray-500">Date</label>
-            <input
-              type="date"
-              className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-              value={currentDate.toISOString().split('T')[0]}
-              onChange={(e) => setCurrentDate(new Date(e.target.value))}
-            />
+            <label className="text-xs text-gray-500">Date (Bikram Sambat)</label>
+            <BikramSambatDatePicker onDateSelect={handleDateSelect} />
           </div>
         </div>
 
         <div className="mt-4 relative min-h-[300px]">
           <AnimatePresence>
             {students.length > 0 ? (
-              <StudentCard
-                key={students[0].id}
-                student={students[0]}
-                onSwipe={handleSwipe}
-              />
+              <>
+                <StudentCard
+                  key={students[0].id}
+                  student={students[0]}
+                  onSwipe={handleSwipe}
+                />
+                <div className="flex justify-center mt-4">
+                  <button
+                    className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-sm"
+                    onClick={() => setSkippedStudents(prev => [...prev, students[0].id])}
+                  >
+                    Skip
+                  </button>
+                </div>
+              </>
             ) : (
               <div className="text-center text-gray-500 py-8">
                 {currentClassId ? "No more students to mark attendance for" : "Please select a class"}

@@ -3,12 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import InputField from "../InputField";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { accountantSchema, AccountantSchema } from "@/lib/formValidationSchemas";
 import { useFormState } from "react-dom";
 import { createAccountant, updateAccountant } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { Dispatch, SetStateAction, useEffect } from "react";
-import { accountantSchema, AccountantSchema } from "@/lib/formValidationSchemas";
+import ErrorDisplay from "../ui/error-display";
 
 const AccountantForm = ({
   type,
@@ -25,92 +26,150 @@ const AccountantForm = ({
     formState: { errors },
   } = useForm<AccountantSchema>({
     resolver: zodResolver(accountantSchema),
+    defaultValues: data,
   });
+
+  const [loading, setLoading] = useState(false);
+  const [showError, setShowError] = useState(false);
 
   const [state, formAction] = useFormState(
     type === "create" ? createAccountant : updateAccountant,
-    { success: false, error: false }
+    {
+      success: false,
+      error: false,
+      message: "",
+      details: null,
+    }
   );
+
+  const onSubmit = handleSubmit(async (data) => {
+    setLoading(true);
+    setShowError(false);
+    await formAction(data);
+    setLoading(false);
+  });
 
   const router = useRouter();
 
   useEffect(() => {
     if (state.success) {
-      toast(`Accountant ${type === "create" ? "created" : "updated"} successfully!`);
+      toast.success(`Accountant has been ${type === "create" ? "created" : "updated"}!`);
       setOpen(false);
       router.refresh();
+    }
+    if (state.error) {
+      setShowError(true);
+      // Still show toast for immediate feedback
+      toast.error(state.message || "Something went wrong!");
+    }
+    if (state.success || state.error) {
+      setLoading(false);
     }
   }, [state, router, type, setOpen]);
 
   return (
-    <form className="flex flex-col gap-8" onSubmit={handleSubmit((data) => formAction(data))}>
+    <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
-        {type === "create" ? "Create New Accountant" : "Update Accountant"}
+        {type === "create" ? "Create a new accountant" : "Update the accountant"}
       </h1>
       
-      <div className="flex flex-col gap-4">
+      {/* Error Display */}
+      {showError && state.error && (
+        <ErrorDisplay
+          error={state.details || state.message || "An error occurred"}
+          title="Error Details"
+          onClose={() => setShowError(false)}
+          className="mb-4"
+        />
+      )}
+      
+      <span className="text-xs text-gray-400 font-medium">
+        Authentication Information
+      </span>
+      <div className="flex justify-between flex-wrap gap-4">
         <InputField
           label="Username"
           name="username"
-          register={register}
-          error={errors.username}
           defaultValue={data?.username}
-        />
-        <InputField
-          label="First Name"
-          name="name"
           register={register}
-          error={errors.name}
-          defaultValue={data?.name}
-        />
-        <InputField
-          label="Last Name"
-          name="surname"
-          register={register}
-          error={errors.surname}
-          defaultValue={data?.surname}
+          error={errors?.username}
         />
         <InputField
           label="Email"
           name="email"
-          register={register}
-          error={errors.email}
           defaultValue={data?.email}
+          register={register}
+          error={errors?.email}
+        />
+        <InputField
+          label="Password"
+          name="password"
+          type="password"
+          defaultValue={data?.password}
+          register={register}
+          error={errors?.password}
+        />
+      </div>
+      <span className="text-xs text-gray-400 font-medium">
+        Personal Information
+      </span>
+      <div className="flex justify-between flex-wrap gap-4">
+        <InputField
+          label="First Name"
+          name="name"
+          defaultValue={data?.name}
+          register={register}
+          error={errors.name}
+        />
+        <InputField
+          label="Last Name"
+          name="surname"
+          defaultValue={data?.surname}
+          register={register}
+          error={errors.surname}
         />
         <InputField
           label="Phone"
           name="phone"
+          defaultValue={data?.phone}
           register={register}
           error={errors.phone}
-          defaultValue={data?.phone}
         />
         <InputField
           label="Address"
           name="address"
+          defaultValue={data?.address}
           register={register}
           error={errors.address}
-          defaultValue={data?.address}
         />
-        {type === "create" && (
+        {data && (
           <InputField
-            label="Password"
-            name="password"
-            type="password"
+            label="Id"
+            name="id"
+            defaultValue={data?.id}
             register={register}
-            error={errors.password}
+            error={errors?.id}
+            hidden
           />
         )}
-        {type === "update" && (
-          <input type="hidden" {...register("id")} defaultValue={data?.id} />
-        )}
       </div>
-
-      {state.error && (
-        <div className="text-red-500 text-sm">Something went wrong!</div>
-      )}
-
-      <button type="submit" className="bg-blue-500 text-white p-2 rounded-md">
-        {type === "create" ? "Create Accountant" : "Update Accountant"}
+      
+      <button 
+        type="submit" 
+        disabled={loading} 
+        className={`p-2 rounded-md text-white transition ${
+          loading 
+            ? "bg-blue-300 cursor-not-allowed" 
+            : "bg-blue-400 hover:bg-blue-500"
+        }`}
+      >
+        {loading
+          ? type === "create"
+            ? "Creating..."
+            : "Updating..."
+          : type === "create"
+          ? "Create"
+          : "Update"}
       </button>
     </form>
   );

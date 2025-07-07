@@ -2,13 +2,24 @@ import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
+import SortDropdown from "@/components/SortDropdown";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Announcement, Class } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
+import { ADToBS } from "bikram-sambat-js";
 
 type AnnouncementList = Announcement & { class: Class | null };
+
+const sortOptions = [
+  { label: "Date (Newest First)", value: "date", direction: "desc" as const },
+  { label: "Date (Oldest First)", value: "date", direction: "asc" as const },
+  { label: "Title (A-Z)", value: "title", direction: "asc" as const },
+  { label: "Title (Z-A)", value: "title", direction: "desc" as const },
+  { label: "Class (A-Z)", value: "class.name", direction: "asc" as const },
+  { label: "Class (Z-A)", value: "class.name", direction: "desc" as const },
+];
 
 const AnnouncementListPage = async (
   props: {
@@ -52,31 +63,33 @@ const AnnouncementListPage = async (
       : []),
   ];
 
-  const renderRow = (item: AnnouncementList) => (
-    <tr
-      key={item.id}
-      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
-    >
-      <td className="p-4">{item.title}</td>
-      <td className="hidden md:table-cell">{item.description}</td>
-      <td>{item.class?.name || "-"}</td>
-      <td className="hidden md:table-cell">
-        {new Date(item.date).toLocaleString("en-US", {
-          dateStyle: "medium",
-        })}
-      </td>
-      {role === "admin" && (
-        <td>
-          <div className="flex items-center gap-2">
-            <FormContainer table="announcement" type="update" data={item} />
-            <FormContainer table="announcement" type="delete" id={item.id} />
-          </div>
-        </td>
-      )}
-    </tr>
-  );
+  const renderRow = (item: AnnouncementList) => {
+    const date = new Date(item.date);
+    const bsDate = ADToBS(date.toISOString().split("T")[0]);
+    const time = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 
-  const { page, ...queryParams } = searchParams;
+    return (
+      <tr
+        key={item.id}
+        className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
+      >
+        <td className="p-4">{item.title}</td>
+        <td className="hidden md:table-cell">{item.description}</td>
+        <td>{item.class?.name || "-"}</td>
+        <td className="hidden md:table-cell">{`${bsDate} ${time}`}</td>
+        {role === "admin" && (
+          <td>
+            <div className="flex items-center gap-2">
+              <FormContainer table="announcement" type="update" data={item} />
+              <FormContainer table="announcement" type="delete" id={item.id} />
+            </div>
+          </td>
+        )}
+      </tr>
+    );
+  };
+
+  const { page, sort, direction, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
@@ -125,7 +138,11 @@ const AnnouncementListPage = async (
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
-      orderBy: {
+      orderBy: sort && direction ? {
+        [sort.includes('.') ? sort.split('.')[0] : sort]: sort.includes('.') 
+          ? { [sort.split('.')[1]]: direction }
+          : direction
+      } : {
         date: 'desc'
       }
     }),
@@ -145,9 +162,7 @@ const AnnouncementListPage = async (
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/filter.png" alt="" width={14} height={14} />
             </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-            </button>
+            <SortDropdown options={sortOptions} defaultSort="date" />
             {role === "admin" && (
               <FormContainer table="announcement" type="create" />
             )}

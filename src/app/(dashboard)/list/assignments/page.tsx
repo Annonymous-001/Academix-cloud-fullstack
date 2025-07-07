@@ -1,12 +1,14 @@
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
+import SortDropdown from "@/components/SortDropdown";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Assignment, Class, Prisma, Subject, Teacher } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
 import FormContainer from "@/components/FormContainer";
+import { ADToBS } from "bikram-sambat-js";
 
 type AssignmentList = Assignment & {
   lesson: {
@@ -15,6 +17,17 @@ type AssignmentList = Assignment & {
     teacher: Teacher;
   };
 };
+
+const sortOptions = [
+  { label: "Date (Newest)", value: "date", direction: "desc" as const },
+  { label: "Date (Oldest)", value: "date", direction: "asc" as const },
+  { label: "Title (A-Z)", value: "title", direction: "asc" as const },
+  { label: "Title (Z-A)", value: "title", direction: "desc" as const },
+  { label: "Class (A-Z)", value: "class.name", direction: "asc" as const },
+  { label: "Class (Z-A)", value: "class.name", direction: "desc" as const },
+  { label: "Teacher (A-Z)", value: "teacher.name", direction: "asc" as const },
+  { label: "Teacher (Z-A)", value: "teacher.name", direction: "desc" as const },
+];
 
 const AssignmentListPage = async (
   props: {
@@ -60,33 +73,42 @@ const AssignmentListPage = async (
       : []),
   ];
 
-  const renderRow = (item: AssignmentList) => (
-    <tr
-      key={item.id}
-      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
-    >
-      <td className="flex items-center gap-4 p-4">{item.lesson.subject.name}</td>
-      <td>{item.lesson.class.name}</td>
-      <td className="hidden md:table-cell">
-        {item.lesson.teacher.name + " " + item.lesson.teacher.surname}
-      </td>
-      <td className="hidden md:table-cell">
-        {new Intl.DateTimeFormat("en-US").format(item.dueDate)}
-      </td>
-      <td>
-        <div className="flex items-center gap-2">
-          {(role === "admin" || role === "teacher") && (
-            <>
-              <FormContainer table="assignment" type="update" data={item} />
-              <FormContainer table="assignment" type="delete" id={item.id} />
-            </>
-          )}
-        </div>
-      </td>
-    </tr>
-  );
+  const renderRow = (item: AssignmentList) => {
+    const bsDate = ADToBS(item.dueDate.toISOString().split('T')[0]);
+    const [year, month, day] = bsDate.split('-').map(Number);
+    const monthNames = [
+      'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
+      'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
+    ];
 
-  const { page, ...queryParams } = searchParams;
+    return (
+      <tr
+        key={item.id}
+        className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
+      >
+        <td className="flex items-center gap-4 p-4">{item.lesson.subject.name}</td>
+        <td>{item.lesson.class.name}</td>
+        <td className="hidden md:table-cell">
+          {item.lesson.teacher.name + " " + item.lesson.teacher.surname}
+        </td>
+        <td className="hidden md:table-cell">
+          {`${monthNames[month - 1]} ${day}, ${year}`}
+        </td>
+        <td>
+          <div className="flex items-center gap-2">
+            {(role === "admin" || role === "teacher") && (
+              <>
+                <FormContainer table="assignment" type="update" data={item} />
+                <FormContainer table="assignment" type="delete" id={item.id} />
+              </>
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
+  const { page, sort, direction, ...queryParams } = searchParams;
 
   const p = page ? parseInt(page) : 1;
 
@@ -130,7 +152,7 @@ const AssignmentListPage = async (
       query.lesson.class = {
         students: {
           some: {
-            id: currentUserId!,
+            studentId: currentUserId!,
           },
         },
       };
@@ -139,7 +161,9 @@ const AssignmentListPage = async (
       query.lesson.class = {
         students: {
           some: {
-            parentId: currentUserId!,
+            student: {
+              parentId: currentUserId!,
+            },
           },
         },
       };
@@ -162,6 +186,13 @@ const AssignmentListPage = async (
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
+      orderBy: sort && direction ? {
+        [sort.includes('.') ? sort.split('.')[0] : sort]: sort.includes('.') 
+          ? { [sort.split('.')[1]]: direction }
+          : direction
+      } : {
+        dueDate: 'desc'
+      }
     }),
     prisma.assignment.count({ where: query }),
   ]);
@@ -178,9 +209,7 @@ const AssignmentListPage = async (
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/filter.png" alt="" width={14} height={14} />
             </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-            </button>
+            <SortDropdown options={sortOptions} defaultSort="date" />
             {(role === "admin" || role === "teacher") && (
               <FormContainer table="assignment" type="create" />
             )}

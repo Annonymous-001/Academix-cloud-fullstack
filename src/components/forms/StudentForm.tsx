@@ -11,25 +11,45 @@ import { createStudent, updateStudent } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { CldUploadWidget } from "next-cloudinary";
+import { ADToBS, BSToAD } from "bikram-sambat-js";
+import ErrorDisplay from "../ui/error-display";
 
-const createWrapper = async (state: { success: boolean; error: boolean }, formData: StudentSchema & { img?: string }) => {
+const createWrapper = async (
+  state: { success: boolean; error: boolean; message?: string; details?: any },
+  formData: StudentSchema & { img?: string }
+) => {
   try {
-    await createStudent({ success: false, error: false, message: "" }, formData);
-    return { success: true, error: false };
-  } catch (error) {
-    return { success: false, error: true };
+    return await createStudent({ success: false, error: false, message: "" }, formData);
+  } catch (error: any) {
+    return {
+      success: false,
+      error: true,
+      message: error.message || "Failed to create student",
+      details: error.details || null,
+    };
   }
 };
 
-const updateWrapper = async (state: { success: boolean; error: boolean }, formData: StudentSchema & { img?: string }) => {
+const updateWrapper = async (
+  state: { success: boolean; error: boolean; message?: string; details?: any },
+  formData: StudentSchema & { img?: string }
+) => {
+  if (!formData.id) {
+    return {
+      success: false,
+      error: true,
+      message: "Student ID is required for update",
+    };
+  }
   try {
-    if (!formData.id) {
-      return { success: false, error: true };
-    }
-    await updateStudent({ success: false, error: false, message: "" }, formData);
-    return { success: true, error: false };
-  } catch (error) {
-    return { success: false, error: true };
+    return await updateStudent({ success: false, error: false, message: "" }, formData);
+  } catch (error: any) {
+    return {
+      success: false,
+      error: true,
+      message: error.message || "Failed to update student",
+      details: error.details || null,
+    };
   }
 };
 
@@ -48,31 +68,77 @@ const StudentForm = ({
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
   } = useForm<StudentSchema>({
     resolver: zodResolver(studentSchema),
   });
 
   const [img, setImg] = useState<any>();
+  const [bsBirthday, setBsBirthday] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [showError, setShowError] = useState(false);
+
+  // Convert AD date to BS when component mounts or data changes
+  useEffect(() => {
+    if (data?.birthday) {
+      const adDate = new Date(data.birthday);
+      const year = adDate.getFullYear();
+      if (!isNaN(adDate.getTime()) && year >= 1913 && year <= 2043) {
+        const bsDate = ADToBS(adDate.toISOString().split('T')[0]);
+        setBsBirthday(bsDate);
+      } else {
+        setBsBirthday("");
+      }
+    }
+  }, [data]);
+
+  // Handle BS date change
+  const handleBSDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const bsDate = e.target.value;
+    setBsBirthday(bsDate);
+    
+    // Convert BS date to AD and set form value
+    try {
+      const adDate = BSToAD(bsDate);
+      // Convert to ISO string and create a new Date object
+      const dateObj = new Date(adDate);
+      setValue('birthday', dateObj);
+    } catch (error) {
+      console.error('Invalid BS date format');
+    }
+  };
 
   const [state, formAction] = useFormState(
     type === "create" ? createWrapper : updateWrapper,
     {
       success: false,
       error: false,
+      message: "",
+      details: null,
     }
   );
 
-  const onSubmit = handleSubmit((formData) => {
-    formAction({ ...formData, img: img?.secure_url });
+  const onSubmit = handleSubmit(async (formData) => {
+    setLoading(true);
+    setShowError(false);
+    await formAction({ ...formData, img: img?.secure_url });
+    setLoading(false);
   });
 
   const router = useRouter();
 
   useEffect(() => {
-    if (state && state.success) {
-      toast(`Student has been ${type === "create" ? "created" : "updated"}!`);
+    if (state.success) {
+      toast.success(`Student has been ${type === "create" ? "created" : "updated"}!`);
       setOpen(false);
       router.refresh();
+    }
+    if (state.error) {
+      setShowError(true);
+      toast.error(state.message || "Something went wrong!");
+    }
+    if (state.success || state.error) {
+      setLoading(false);
     }
   }, [state, router, type, setOpen]);
 
@@ -83,6 +149,16 @@ const StudentForm = ({
       <h1 className="text-xl font-semibold">
         {type === "create" ? "Create a new student" : "Update the student"}
       </h1>
+
+      {showError && state.error && (
+        <ErrorDisplay
+          error={state.details || state.message || "An error occurred"}
+          title="Error Details"
+          onClose={() => setShowError(false)}
+          className="mb-4"
+        />
+      )}
+
       <span className="text-xs text-gray-400 font-medium">
         Authentication Information
       </span>
@@ -117,41 +193,50 @@ const StudentForm = ({
           register={register}
           error={errors?.IEMISCODE}
         />
+        <InputField
+          label="Student ID"
+          name="StudentId"
+          defaultValue={data?.StudentId}
+          register={register}
+          error={errors?.StudentId}
+        />
       </div>
       <span className="text-xs text-gray-400 font-medium">
         Personal Information
       </span>
-      <CldUploadWidget
-        uploadPreset="school"
-        onSuccess={(result, { widget }) => {
-          setImg(result.info);
-          widget.close();
-        }}
-      >
-        {({ open }) => (
-          <div className="flex flex-col items-center gap-2">
-            <div
-              className="text-xs text-gray-500 flex items-center gap-2 cursor-pointer"
-              onClick={() => open()}
-            >
-              <Image src="/upload.png" alt="" width={28} height={28} />
-              <span>Upload a photo</span>
-            </div>
-
-            {img && (
-              <div className="mt-2">
-                <Image
-                  src={img.secure_url}
-                  alt="Uploaded Image Preview"
-                  width={100}
-                  height={100}
-                  className="rounded-lg border"
-                />
+      <div className="flex justify-center">
+        <CldUploadWidget
+          uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "school"}
+          onSuccess={(result, { widget }) => {
+            setImg(result.info);
+            widget.close();
+          }}
+        >
+          {({ open }) => (
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className="text-xs text-gray-500 flex items-center gap-2 cursor-pointer"
+                onClick={() => open()}
+              >
+                <Image src="/upload.png" alt="" width={28} height={28} />
+                <span>Upload a photo</span>
               </div>
-            )}
-          </div>
-        )}
-      </CldUploadWidget>
+
+              {img && (
+                <div className="mt-2">
+                  <Image
+                    src={img.secure_url}
+                    alt="Uploaded Image Preview"
+                    width={100}
+                    height={100}
+                    className="rounded-lg border"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </CldUploadWidget>
+      </div>
       <div className="flex justify-between flex-wrap gap-4">
         <InputField
           label="First Name"
@@ -202,14 +287,21 @@ const StudentForm = ({
           register={register}
           error={errors.bloodType}
         />
-        <InputField
-          label="Birthday"
-          name="birthday"
-          defaultValue={data?.birthday?.toISOString().split("T")[0]}
-          register={register}
-          error={errors.birthday}
-          type="date"
-        />
+        <div className="flex flex-col gap-2 w-full md:w-1/4">
+          <label className="text-xs text-gray-500">Birthday (BS)</label>
+          <input
+            type="text"
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+            placeholder="YYYY-MM-DD"
+            value={bsBirthday}
+            onChange={handleBSDateChange}
+          />
+          {errors.birthday?.message && (
+            <p className="text-xs text-red-400">
+              {errors.birthday.message.toString()}
+            </p>
+          )}
+        </div>
         <div className="flex flex-col gap-2 w-full md:w-1/4">
           <label className="text-xs text-gray-500">Sex</label>
           <select
@@ -289,10 +381,36 @@ const StudentForm = ({
             <p className="text-xs text-red-400">{errors.classId.message}</p>
           )}
         </div>
+        <div className="flex flex-col gap-2 w-full md:w-1/4">
+          <label className="text-xs text-gray-500">Academic Year (BS)</label>
+          <select
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+            {...register("year")}
+            defaultValue={data?.year || 2081}
+          >
+            {Array.from({ length: 21 }, (_, i) => 2070 + i).map(year => (
+              <option value={year} key={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+          {errors.year?.message && (
+            <p className="text-xs text-red-400">{errors.year.message}</p>
+          )}
+        </div>
       </div>
-      {state?.error && <span className="text-red-500">Something went wrong!</span>}
-      <button type="submit" className="bg-blue-400 text-white p-2 rounded-md">
-        {type === "create" ? "Create" : "Update"}
+      <button
+        type="submit"
+        disabled={loading}
+        className={`${
+          loading ? "bg-gray-400" : "bg-blue-400"
+        } text-white p-2 rounded-md transition-colors`}
+      >
+        {loading
+          ? `${type === "create" ? "Creating" : "Updating"}...`
+          : type === "create"
+          ? "Create"
+          : "Update"}
       </button>
     </form>
   );

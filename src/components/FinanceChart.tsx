@@ -19,6 +19,12 @@ type ChartData = {
 }[];
 
 const FinanceChart = ({ data }: { data: ChartData }) => {
+  function formatINRCurrency(value: number): string {
+    if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`;
+    if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;
+    if (value >= 1000) return `₹${(value / 1000).toFixed(1)}K`;
+    return `₹${value}`;
+  }
   return (
     <div className="bg-white rounded-xl w-full h-full p-4">
       <div className="flex justify-between items-center">
@@ -50,10 +56,10 @@ const FinanceChart = ({ data }: { data: ChartData }) => {
             tick={{ fill: "#d1d5db" }} 
             tickLine={false} 
             tickMargin={20}
-            tickFormatter={(value) => `₹${value.toLocaleString()}`}
+            tickFormatter={formatINRCurrency}
           />
           <Tooltip 
-            formatter={(value: number) => [`₹${value.toLocaleString()}`, '']}
+            formatter={(value: number) => [formatINRCurrency(Number(value)), '']}
             labelFormatter={(label) => `Month: ${label}`}
           />
           <Legend

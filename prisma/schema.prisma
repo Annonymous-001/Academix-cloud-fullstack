@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  
 }
 
 datasource db {
@@ -26,40 +25,53 @@ model Student {
   sex         UserSex
   createdAt   DateTime       @default(now())
   parentId    String?
-  classId     Int
-  gradeId     Int
   birthday    DateTime
   StudentId   String         @unique
-  IEMISCODE   Int            @unique
+  IEMISCODE   Int
   disability  DisabilityType @default(NONE)
   fatherName  String
   motherName  String
   attendances Attendance[]
   fees        Fee[]
   results     Result[]
-  class       Class          @relation(fields: [classId], references: [id])
-  grade       Grade          @relation(fields: [gradeId], references: [id])
   parent      Parent?        @relation(fields: [parentId], references: [id])
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  studentId String
+  classId   Int
+  gradeId   Int
+  year      Int       // Academic year (BS)
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime?
+
+  student   Student   @relation(fields: [studentId], references: [StudentId])
+  class     Class     @relation(fields: [classId], references: [id])
+  grade     Grade     @relation(fields: [gradeId], references: [id])
+
+  @@unique([studentId, year])
 }
 
 model Teacher {
-  id        String    @id @default(cuid())
-  username  String    @unique
-  name      String
-  surname   String
-  email     String?   @unique
-  phone     String?   @unique
-  address   String
-  img       String?
-  bloodType String
-  sex       UserSex
-  createdAt DateTime  @default(now())
-  birthday  DateTime
-  teacherId String    @unique
-  classes   Class[]
-  lessons   Lesson[]
-  subjects  Subject[] @relation("SubjectToTeacher")
+  id          String              @id @default(cuid())
+  username    String              @unique
+  name        String
+  surname     String
+  email       String?             @unique
+  phone       String?             @unique
+  address     String
+  img         String?
+  bloodType   String
+  sex         UserSex
+  createdAt   DateTime            @default(now())
+  birthday    DateTime
+  teacherId   String              @unique
+  classes     Class[]
+  lessons     Lesson[]
   attendances TeacherAttendance[]
+  subjects    Subject[]           @relation("SubjectToTeacher")
 }
 
 model Parent {
@@ -79,7 +91,7 @@ model Grade {
   id       Int       @id @default(autoincrement())
   level    Int       @unique
   classes  Class[]
-  students Student[]
+  students Enrollment[]
 }
 
 model Class {
@@ -89,12 +101,13 @@ model Class {
   supervisorId  String?
   gradeId       Int
   announcements Announcement[]
+  attendances   Attendance[]
   grade         Grade          @relation(fields: [gradeId], references: [id])
   supervisor    Teacher?       @relation(fields: [supervisorId], references: [id])
   events        Event[]
   lessons       Lesson[]
-  students      Student[]
-  attendances   Attendance[]
+  students      Enrollment[]
+  exams         Exam[]
 }
 
 model Subject {
@@ -102,19 +115,19 @@ model Subject {
   name     String    @unique
   lessons  Lesson[]
   teachers Teacher[] @relation("SubjectToTeacher")
+  exams    Exam[]
 }
 
 model Lesson {
   id          Int          @id @default(autoincrement())
   name        String
-  day         Day
+  day         Day?
   startTime   DateTime
   endTime     DateTime
   subjectId   Int
   classId     Int
   teacherId   String
   assignments Assignment[]
-  exams       Exam[]
   attendances Attendance[]
   class       Class        @relation(fields: [classId], references: [id])
   subject     Subject      @relation(fields: [subjectId], references: [id])
@@ -126,8 +139,10 @@ model Exam {
   title     String
   startTime DateTime
   endTime   DateTime
-  lessonId  Int
-  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  subjectId Int
+  classId   Int
+  subject   Subject  @relation(fields: [subjectId], references: [id])
+  class     Class    @relation(fields: [classId], references: [id])
   results   Result[]
 }
 
@@ -156,14 +171,14 @@ model Attendance {
   id        Int              @id @default(autoincrement())
   date      DateTime
   studentId String
-  classId   Int
   lessonId  Int?
   inTime    DateTime?
   outTime   DateTime?
   status    AttendanceStatus @default(PRESENT)
+  classId   Int
   class     Class            @relation(fields: [classId], references: [id])
-  student   Student          @relation(fields: [studentId], references: [id])
   lesson    Lesson?          @relation(fields: [lessonId], references: [id])
+  student   Student          @relation(fields: [studentId], references: [id])
 }
 
 model TeacherAttendance {

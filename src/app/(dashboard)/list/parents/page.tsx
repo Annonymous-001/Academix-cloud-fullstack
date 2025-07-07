@@ -2,6 +2,7 @@ import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
+import SortDropdown from "@/components/SortDropdown";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Parent, Prisma, Student } from "@prisma/client";
@@ -87,7 +88,7 @@ const ParentListPage = async (
     </tr>
   );
 
-  const { page, ...queryParams } = searchParams;
+  const { page, sort, direction, ...queryParams } = searchParams;
 
   const p = page ? parseInt(page) : 1;
 
@@ -100,7 +101,10 @@ const ParentListPage = async (
       if (value !== undefined) {
         switch (key) {
           case "search":
-            query.name = { contains: value, mode: "insensitive" };
+            query.OR = [
+              { name: { contains: value, mode: "insensitive" } },
+              { parentId: { contains: value, mode: "insensitive" } }
+            ];
             break;
           default:
             break;
@@ -117,9 +121,25 @@ const ParentListPage = async (
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
+      orderBy: sort && direction ? {
+        [sort.includes('.') ? sort.split('.')[0] : sort]: sort.includes('.') 
+          ? { [sort.split('.')[1]]: direction }
+          : direction
+      } : {
+        name: 'asc'
+      }
     }),
     prisma.parent.count({ where: query }),
   ]);
+
+  const sortOptions = [
+    { label: "Name (A-Z)", value: "name", direction: "asc" as const },
+    { label: "Name (Z-A)", value: "name", direction: "desc" as const },
+    { label: "Phone (A-Z)", value: "phone", direction: "asc" as const },
+    { label: "Phone (Z-A)", value: "phone", direction: "desc" as const },
+    { label: "Parent ID (A-Z)", value: "parentId", direction: "asc" as const },
+    { label: "Parent ID (Z-A)", value: "parentId", direction: "desc" as const },
+  ];
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
@@ -132,9 +152,7 @@ const ParentListPage = async (
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/filter.png" alt="" width={14} height={14} />
             </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-            </button>
+            <SortDropdown options={sortOptions} defaultSort="name" />
             {role === "admin" && <FormContainer table="parent" type="create" />}
           </div>
         </div>

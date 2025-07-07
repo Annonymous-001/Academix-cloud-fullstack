@@ -40,7 +40,31 @@ export default function ReportCardPage(props: { params: { id: string } }) {
         setLoading(true);
         const response = await getStudentReportData(id);
         if (response.success && response.data) {
-          setStudent(response.data);
+          const { id, name, surname, StudentId, class: studentClass, results } = response.data as any;
+          const studentData: StudentWithResults = {
+            id,
+            name,
+            surname,
+            StudentId,
+            class: studentClass && studentClass.name ? studentClass : { name: '' },
+            results: Array.isArray(results)
+              ? results.map((r: any) => ({
+                  ...r,
+                  exam: r.exam
+                    ? {
+                        ...r.exam,
+                        title: r.exam.title,
+                        lesson: {
+                          subject: {
+                            name: r.exam.lesson.subject.name,
+                          },
+                        },
+                      }
+                    : null,
+                }))
+              : [],
+          };
+          setStudent(studentData);
         } else {
           setError(response.message || 'Failed to load student data');
         }

@@ -2,6 +2,7 @@ import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
+import SortDropdown from "@/components/SortDropdown";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Class, Lesson, Prisma, Subject, Teacher } from "@prisma/client";
@@ -11,6 +12,17 @@ import { auth } from "@clerk/nextjs/server";
 type LessonList = Lesson & { subject: Subject } & { class: Class } & {
   teacher: Teacher;
 };
+
+const sortOptions = [
+  { label: "Time (Earliest)", value: "time", direction: "asc" as const },
+  { label: "Time (Latest)", value: "time", direction: "desc" as const },
+  { label: "Day (A-Z)", value: "day", direction: "asc" as const },
+  { label: "Day (Z-A)", value: "day", direction: "desc" as const },
+  { label: "Class (A-Z)", value: "class.name", direction: "asc" as const },
+  { label: "Class (Z-A)", value: "class.name", direction: "desc" as const },
+  { label: "Teacher (A-Z)", value: "teacher.name", direction: "asc" as const },
+  { label: "Teacher (Z-A)", value: "teacher.name", direction: "desc" as const },
+];
 
 const LessonListPage = async (
   props: {
@@ -87,7 +99,8 @@ const LessonListPage = async (
     );
   };
 
-  const { page, ...queryParams } = searchParams;
+  const { page, sort, direction, ...queryParams } = searchParams;
+
   const p = page ? parseInt(page) : 1;
 
   const query: Prisma.LessonWhereInput = {};
@@ -104,7 +117,7 @@ const LessonListPage = async (
             break;
           case "search":
             query.OR = [
-              { subject: { name: { contains: value, mode: "insensitive" } } },
+              { class: { name: { contains: value, mode: "insensitive" } } },
               { teacher: { name: { contains: value, mode: "insensitive" } } },
             ];
             break;
@@ -119,12 +132,19 @@ const LessonListPage = async (
     prisma.lesson.findMany({
       where: query,
       include: {
-        subject: { select: { name: true } },
-        class: { select: { name: true } },
-        teacher: { select: { name: true, surname: true } },
+        class: true,
+        teacher: true,
+        subject: true,
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
+      orderBy: sort && direction ? {
+        [sort.includes('.') ? sort.split('.')[0] : sort]: sort.includes('.') 
+          ? { [sort.split('.')[1]]: direction }
+          : direction
+      } : {
+        day: 'asc'
+      }
     }),
     prisma.lesson.count({ where: query }),
   ]);
@@ -140,9 +160,7 @@ const LessonListPage = async (
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-yellow-400">
               <Image src="/filter.png" alt="" width={14} height={14} />
             </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-yellow-400">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-            </button>
+            <SortDropdown options={sortOptions} defaultSort="day" />
             {role === "admin" && <FormContainer table="lesson" type="create" />}
           </div>
         </div>

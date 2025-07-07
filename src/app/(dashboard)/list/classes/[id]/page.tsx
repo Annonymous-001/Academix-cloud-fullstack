@@ -4,15 +4,26 @@ import Link from "next/link";
 import prisma from "@/lib/prisma";
 import Table from "@/components/Table";
 import FormContainer from "@/components/FormContainer";
+import TransferButton from "@/components/TransferButton";
+import YearFilter from "@/components/YearFilter";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import BulkFeeModal from "@/components/BulkFeeModal";
+import SortDropdown from "@/components/SortDropdown";
+import TableSearch from "@/components/TableSearch";
+import StudentDeleteButton from "@/components/StudentDeleteButton";
+import StudentMultiTransfer from '@/components/StudentMultiTransfer';
 
-const ClassDetailPage = async (props: { params: Promise<{ id: string }> }) => {
-  const params = await props.params;
+const ClassDetailPage = async (props: { params: { id: string }, searchParams?: { year?: string } }) => {
+  const { id } = props.params;
   const session = await auth();
   const role = (session.sessionClaims?.metadata as { role?: string })?.role;
 
-  const classId = parseInt(params.id);
+  const classId = Number(id);
+  if (!classId || isNaN(classId)) {
+    return <div className="m-4 p-4 bg-red-100 rounded-md">Invalid class ID</div>;
+  }
 
-  // Fetch class with related data
+  // Fetch class with related data (except students)
   const classData = await prisma.class.findUnique({
     where: {
       id: classId,
@@ -20,11 +31,6 @@ const ClassDetailPage = async (props: { params: Promise<{ id: string }> }) => {
     include: {
       supervisor: true,
       grade: true,
-      students: {
-        include: {
-          parent: true,
-        },
-      },
       lessons: {
         include: {
           subject: true,
@@ -40,8 +46,60 @@ const ClassDetailPage = async (props: { params: Promise<{ id: string }> }) => {
     return <div className="m-4 p-4 bg-red-100 rounded-md">Class not found</div>;
   }
 
+  // Fetch all classes except the current one
+  const allClasses = await prisma.class.findMany({
+    where: { id: { not: classId } },
+    select: { id: true, name: true },
+  });
+
+  const currentYear = props.searchParams?.year || "";
+
+  // Fetch all years for this class (for the filter)
+  const allYears = await prisma.enrollment.findMany({
+    where: { classId: classId },
+    select: { year: true },
+    distinct: ['year'],
+    orderBy: { year: 'desc' }
+  });
+  const yearOptions = allYears.map(e => e.year).sort((a, b) => b - a);
+
+  // Fetch enrollments for this class, filtered by year if selected
+  const enrollments = await prisma.enrollment.findMany({
+    where: {
+      classId: classId,
+      ...(currentYear ? { year: parseInt(currentYear) } : {}),
+      leftAt: null // Only active enrollments
+    },
+    include: {
+      student: {
+        include: { parent: true }
+      }
+    }
+  });
+
+  // Fetch fees for this class's students
+  const studentIds = enrollments.map(enrollment => enrollment.student.id);
+  const classFees = await prisma.fee.findMany({
+    where: {
+      studentId: {
+        in: studentIds
+      }
+    },
+    include: {
+      student: true
+    }
+  });
+
+  // Calculate fee summary for this class
+  const now = new Date();
+  const totalFees = classFees.reduce((sum, f) => sum + Number(f.totalAmount), 0);
+  const collected = classFees.reduce((sum, f) => sum + Number(f.paidAmount), 0);
+  const pending = classFees.filter(f => f.status !== "PAID").reduce((sum, f) => sum + (Number(f.totalAmount) - Number(f.paidAmount)), 0);
+  const overdue = classFees.filter(f => f.status !== "PAID" && new Date(f.dueDate) < now).reduce((sum, f) => sum + (Number(f.totalAmount) - Number(f.paidAmount)), 0);
+
   // Student list table configuration
   const studentColumns = [
+    { header: '', accessor: 'select' },
     {
       header: "Student",
       accessor: "name",
@@ -52,44 +110,43 @@ const ClassDetailPage = async (props: { params: Promise<{ id: string }> }) => {
       className: "hidden md:table-cell",
     },
     {
-      header: "Parent",
-      accessor: "parent",
-      className: "hidden md:table-cell",
-    },
-    {
       header: "Action",
       accessor: "action",
     },
   ];
 
-  const renderStudentRow = (student: any) => (
-    <tr
-      key={student.id}
-      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
-    >
-      <td className="flex items-center gap-4 p-4">
-        {student.img && (
-          <div className="relative w-8 h-8 rounded-full overflow-hidden">
-            <Image src={student.img} alt={student.name} fill sizes="32px" className="object-cover" />
+  // Sort options for students
+  const studentSortOptions = [
+    { label: "Name (A-Z)", value: "name", direction: "asc" as const },
+    { label: "Name (Z-A)", value: "name", direction: "desc" as const },
+    { label: "ID (Low-High)", value: "StudentId", direction: "asc" as const },
+    { label: "ID (High-Low)", value: "StudentId", direction: "desc" as const },
+  ];
+
+  // Use enrollment.student for row rendering
+  const renderStudentRow = (enrollment: any) => {
+    const student = enrollment.student;
+    return (
+      <tr className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight">
+        <td className="p-4 align-middle">
+          <span>{student.name} {student.surname}</span>
+        </td>
+        <td className="p-4 align-middle">{student.StudentId}</td>
+        <td className="p-4 align-middle">
+          <div className="flex items-center gap-2">
+            <Link href={`/list/students/${student.id}`}>
+              <button className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaSky">
+                <Image src="/view.png" alt="" width={16} height={16} />
+              </button>
+            </Link>
+            {role === "admin" && (
+              <StudentDeleteButton enrollmentId={enrollment.id} />
+            )}
           </div>
-        )}
-        <span>{student.name} {student.surname}</span>
-      </td>
-      <td className="hidden md:table-cell">{student.StudentId}</td>
-      <td className="hidden md:table-cell">
-        {student.parent ? `${student.parent.name} ${student.parent.surname}` : "N/A"}
-      </td>
-      <td>
-        <div className="flex items-center gap-2">
-          <Link href={`/list/students/${student.id}`}>
-            <button className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaSky">
-              <Image src="/view.png" alt="" width={16} height={16} />
-            </button>
-          </Link>
-        </div>
-      </td>
-    </tr>
-  );
+        </td>
+      </tr>
+    );
+  };
 
   // Lessons table configuration
   const lessonColumns = [
@@ -161,8 +218,9 @@ const ClassDetailPage = async (props: { params: Promise<{ id: string }> }) => {
           {role === "admin" && (
             <div className="flex gap-2">
               <FormContainer table="class" type="update" data={classData} />
+              <TransferButton classId={classData.id} currentClassName={classData.name} />
               <Link href={`/list/classes`}>
-                <button className="px-4 py-2 bg-lamaSky text-white rounded-md text-sm">
+                <button className="px-4 py-2 bg-lamaSky text-black rounded-md text-sm hover:bg-lamaSky/90">
                   Back to Classes
                 </button>
               </Link>
@@ -188,7 +246,7 @@ const ClassDetailPage = async (props: { params: Promise<{ id: string }> }) => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Current:</span>
-                <span className="font-medium">{classData.students.length} students</span>
+                <span className="font-medium">{enrollments.length} students</span>
               </div>
             </div>
           </div>
@@ -234,7 +292,7 @@ const ClassDetailPage = async (props: { params: Promise<{ id: string }> }) => {
               <div className="flex justify-between">
                 <span className="text-gray-600">Upcoming Events:</span>
                 <span className="font-medium">
-                  {classData.events.filter(event => new Date(event.startTime) > new Date()).length}
+                  {classData.events.filter((event: any) => new Date(event.startTime) > new Date()).length}
                 </span>
               </div>
             </div>
@@ -242,41 +300,64 @@ const ClassDetailPage = async (props: { params: Promise<{ id: string }> }) => {
         </div>
       </div>
 
+      {/* Fee Summary Cards */}
+      <div className="bg-white p-6 rounded-md shadow-sm">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-800">Fee Summary</h2>
+          {role === "admin" && (
+            <BulkFeeModal classId={classData.id} className={classData.name} />
+          )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <CardTitle className="text-base">Total Fees</CardTitle>
+              <div className="text-2xl font-bold">₹{totalFees.toLocaleString()}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <CardTitle className="text-base">Collected</CardTitle>
+              <div className="text-2xl font-bold">₹{collected.toLocaleString()}</div>
+              <div className="text-xs text-gray-500">{((collected/totalFees)*100 || 0).toFixed(0)}% of total fees</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <CardTitle className="text-base">Pending</CardTitle>
+              <div className="text-2xl font-bold">₹{pending.toLocaleString()}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <CardTitle className="text-base">Overdue</CardTitle>
+              <div className="text-2xl font-bold">₹{overdue.toLocaleString()}</div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       {/* Students Section */}
       <div className="bg-white p-6 rounded-md shadow-sm">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-800">Students</h2>
-          {role === "admin" && (
-            <FormContainer table="student" type="create" data={{ classId: classData.id }} />
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <YearFilter currentYear={currentYear} years={yearOptions} />
+            <TableSearch placeholder="Search students..." />
+            <SortDropdown options={studentSortOptions} defaultSort="name" />
+            {role === "admin" && (
+              <FormContainer table="student" type="create" data={{ classId: classData.id }} />
+            )}
+          </div>
         </div>
-        {classData.students.length > 0 ? (
+        {enrollments.length > 0 ? (
           <Table 
             columns={studentColumns} 
-            data={classData.students} 
+            data={enrollments} 
             renderRow={renderStudentRow} 
           />
         ) : (
           <div className="text-center py-8 text-gray-500">No students enrolled in this class</div>
-        )}
-      </div>
-
-      {/* Lessons Section */}
-      <div className="bg-white p-6 rounded-md shadow-sm">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-800">Lessons</h2>
-          {role === "admin" && (
-            <FormContainer table="lesson" type="create" data={{ classId: classData.id }} />
-          )}
-        </div>
-        {classData.lessons.length > 0 ? (
-          <Table 
-            columns={lessonColumns} 
-            data={classData.lessons} 
-            renderRow={renderLessonRow} 
-          />
-        ) : (
-          <div className="text-center py-8 text-gray-500">No lessons scheduled for this class</div>
         )}
       </div>
 
@@ -334,6 +415,36 @@ const ClassDetailPage = async (props: { params: Promise<{ id: string }> }) => {
             <div className="text-center py-8 text-gray-500">No upcoming events</div>
           )}
         </div>
+      </div>
+
+      {/* Move StudentMultiTransfer to below Announcements & Events */}
+      {role === "admin" && (
+        <div className="bg-white p-6 rounded-md shadow-sm mt-6">
+          <StudentMultiTransfer
+            enrollments={enrollments}
+            classes={allClasses}
+            currentClassId={classData.id}
+          />
+        </div>
+      )}
+
+      {/* Lessons Section */}
+      <div className="bg-white p-6 rounded-md shadow-sm">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-800">Lessons</h2>
+          {role === "admin" && (
+            <FormContainer table="lesson" type="create" data={{ classId: classData.id }} />
+          )}
+        </div>
+        {classData.lessons.length > 0 ? (
+          <Table 
+            columns={lessonColumns} 
+            data={classData.lessons} 
+            renderRow={renderLessonRow} 
+          />
+        ) : (
+          <div className="text-center py-8 text-gray-500">No lessons scheduled for this class</div>
+        )}
       </div>
     </div>
   );

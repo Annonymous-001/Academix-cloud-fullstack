@@ -1,7 +1,8 @@
 import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
-import TableControls from "@/components/TableControls";
+import TableSearch from "@/components/TableSearch";
+import SortDropdown from "@/components/SortDropdown";
 import prisma from "@/lib/prisma";
 import { Class, Prisma, Subject, Teacher } from "@prisma/client";
 import Image from "next/image";
@@ -101,11 +102,9 @@ const TeacherListPage = async (
       </td>
     </tr>
   );
-  const { page, sortBy, sortOrder, ...queryParams } = searchParams;
+  const { page, sort, direction, ...queryParams } = searchParams;
 
   const p = page ? parseInt(page) : 1;
-  const sortField = sortBy || "name";
-  const order = sortOrder === "desc" ? "desc" : "asc";
 
   // URL PARAMS CONDITION
   const query: Prisma.TeacherWhereInput = {};
@@ -114,18 +113,17 @@ const TeacherListPage = async (
     for (const [key, value] of Object.entries(queryParams)) {
       if (value !== undefined) {
         switch (key) {
-          case "classId":
-            query.lessons = {
+          case "subject":
+            query.subjects = {
               some: {
-                classId: parseInt(value),
-              },
+                name: { contains: value, mode: "insensitive" }
+              }
             };
             break;
           case "search":
             query.OR = [
               { name: { contains: value, mode: "insensitive" } },
-              { email: { contains: value, mode: "insensitive" } },
-              { teacherId: { contains: value, mode: "insensitive" } },
+              { teacherId: { contains: value, mode: "insensitive" } }
             ];
             break;
           default:
@@ -140,31 +138,47 @@ const TeacherListPage = async (
       where: query,
       include: {
         subjects: true,
-        classes: true,
-      },
-      orderBy: {
-        [sortField]: order,
+        classes: true
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
+      orderBy: sort && direction ? {
+        [sort.includes('.') ? sort.split('.')[0] : sort]: sort.includes('.') 
+          ? { [sort.split('.')[1]]: direction }
+          : direction
+      } : {
+        name: 'asc'
+      }
     }),
     prisma.teacher.count({ where: query }),
   ]);
+
+  const sortOptions = [
+    { label: "Name (A-Z)", value: "name", direction: "asc" as const },
+    { label: "Name (Z-A)", value: "name", direction: "desc" as const },
+    { label: "Email (A-Z)", value: "email", direction: "asc" as const },
+    { label: "Email (Z-A)", value: "email", direction: "desc" as const },
+    { label: "Phone (A-Z)", value: "phone", direction: "asc" as const },
+    { label: "Phone (Z-A)", value: "phone", direction: "desc" as const },
+    { label: "Teacher ID (A-Z)", value: "teacherId", direction: "asc" as const },
+    { label: "Teacher ID (Z-A)", value: "teacherId", direction: "desc" as const },
+   
+  ];
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       {/* TOP */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Teachers</h1>
-        <div className="flex items-center gap-4">
-          <TableControls 
-            table="teacher"
-            sortField={sortField}
-            sortOrder={order}
-          />
-          {role === "admin" && (
-            <FormContainer table="teacher" type="create" />
-          )}
+        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+          <TableSearch />
+          <div className="flex items-center gap-4 self-end">
+            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+              <Image src="/filter.png" alt="" width={14} height={14} />
+            </button>
+            <SortDropdown options={sortOptions} defaultSort="name" />
+            {role === "admin" && <FormContainer table="teacher" type="create" />}
+          </div>
         </div>
       </div>
       {/* LIST */}

@@ -8,10 +8,20 @@ import { TeacherAttendance, Teacher } from "@prisma/client";
 import { auth } from "@clerk/nextjs/server";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import SortDropdown from "@/components/SortDropdown";
+import { ADToBS } from "bikram-sambat-js";
 
 type TeacherAttendanceWithRelations = TeacherAttendance & {
   teacher: Teacher;
 };
+
+const sortOptions = [
+  { label: "Date (Newest)", value: "date", direction: "desc" as const },
+  { label: "Date (Oldest)", value: "date", direction: "asc" as const },
+  { label: "Teacher (A-Z)", value: "teacher", direction: "asc" as const },
+  { label: "Teacher (Z-A)", value: "teacher", direction: "desc" as const },
+  { label: "Status (A-Z)", value: "status", direction: "asc" as const },
+  { label: "Status (Z-A)", value: "status", direction: "desc" as const },
+];
 
 const TeacherAttendanceListPage = async (
   props: {
@@ -24,6 +34,17 @@ const TeacherAttendanceListPage = async (
   const sessionClaims = session.sessionClaims;
   const role = (sessionClaims?.metadata as { role?: string })?.role;
   const currentUserId = userId;
+
+  const nepaliMonths = [
+    'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
+    'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
+  ];
+
+  const formatBSDate = (date: Date) => {
+    const bsDate = ADToBS(date.toISOString().split('T')[0]);
+    const [year, month, day] = bsDate.split('-').map(Number);
+    return `${nepaliMonths[month - 1]} ${day}, ${year}`;
+  };
 
   // --- Fetch all attendance for summary cards ---
   const allAttendance = await prisma.teacherAttendance.findMany({
@@ -62,7 +83,7 @@ const TeacherAttendanceListPage = async (
 
   const columns = [
     { header: "Teacher", accessor: "teacher" },
-    { header: "Date", accessor: "date" },
+    { header: "Date (BS)", accessor: "date" },
     { header: "In Time", accessor: "inTime" },
     { header: "Out Time", accessor: "outTime" },
     { header: "Status", accessor: "status" },
@@ -75,13 +96,7 @@ const TeacherAttendanceListPage = async (
       className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
     >
       <td className="p-4">{`${attendance.teacher.name} ${attendance.teacher.surname}`}</td>
-      <td>
-        {new Date(attendance.date).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        })}
-      </td>
+      <td>{formatBSDate(new Date(attendance.date))}</td>
       <td>
         {attendance.inTime ? attendance.inTime : "-"}
       </td>
@@ -186,7 +201,7 @@ const TeacherAttendanceListPage = async (
         <h1 className="hidden md:block text-lg font-semibold">Teacher Attendance</h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
-          <SortDropdown sort={sort} />
+          <SortDropdown options={sortOptions} defaultSort="date" />
           <div className="flex items-center gap-4 self-end">
             {role === "admin" && (
               <FormContainer table="teacherattendance" type="create" />

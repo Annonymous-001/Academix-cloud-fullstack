@@ -2,6 +2,7 @@ import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
+import SortDropdown from "@/components/SortDropdown";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Prisma, Subject, Teacher } from "@prisma/client";
@@ -9,6 +10,15 @@ import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
 
 type SubjectList = Subject & { teachers: Teacher[] };
+
+const sortOptions = [
+  { label: "Name (A-Z)", value: "name", direction: "asc" as const },
+  { label: "Name (Z-A)", value: "name", direction: "desc" as const },
+  { label: "Code (A-Z)", value: "code", direction: "asc" as const },
+  { label: "Code (Z-A)", value: "code", direction: "desc" as const },
+  { label: "Teacher (A-Z)", value: "teacher.name", direction: "asc" as const },
+  { label: "Teacher (Z-A)", value: "teacher.name", direction: "desc" as const },
+];
 
 const SubjectListPage = async (
   props: {
@@ -57,18 +67,24 @@ const SubjectListPage = async (
     </tr>
   );
 
-  const { page, ...queryParams } = searchParams;
+  const { page, sort, direction, ...queryParams } = searchParams;
 
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
-
   const query: Prisma.SubjectWhereInput = {};
 
   if (queryParams) {
     for (const [key, value] of Object.entries(queryParams)) {
       if (value !== undefined) {
         switch (key) {
+          case "teacherId":
+            query.teachers = {
+              some: {
+                id: value
+              }
+            };
+            break;
           case "search":
             query.name = { contains: value, mode: "insensitive" };
             break;
@@ -87,6 +103,13 @@ const SubjectListPage = async (
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
+      orderBy: sort && direction ? {
+        [sort.includes('.') ? sort.split('.')[0] : sort]: sort.includes('.') 
+          ? { [sort.split('.')[1]]: direction }
+          : direction
+      } : {
+        name: 'asc'
+      }
     }),
     prisma.subject.count({ where: query }),
   ]);
@@ -102,12 +125,8 @@ const SubjectListPage = async (
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/filter.png" alt="" width={14} height={14} />
             </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-            </button>
-            {role === "admin" && (
-              <FormContainer table="subject" type="create" />
-            )}
+            <SortDropdown options={sortOptions} defaultSort="name" />
+            {role === "admin" && <FormContainer table="subject" type="create" />}
           </div>
         </div>
       </div>

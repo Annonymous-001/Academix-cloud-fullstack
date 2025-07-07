@@ -1,7 +1,8 @@
 import prisma from "@/lib/prisma";
 import BigCalendar from "./BigCalender";
 import { adjustScheduleToCurrentWeek } from "@/lib/utils";
-import moment from "moment-timezone"; 
+import moment from "moment-timezone";
+import { ADToBS } from "bikram-sambat-js";
 
 const BigCalendarContainer = async ({
   type,
@@ -18,12 +19,18 @@ const BigCalendarContainer = async ({
     },
   });
 
- 
-  const data = dataRes.map((lesson) => ({
-    title: lesson.name,
-    start: moment.utc(lesson.startTime).local().toDate(), // Convert UTC to local
-    end: moment.utc(lesson.endTime).local().toDate(),
-  }));
+  const data = dataRes.map((lesson) => {
+    const start = moment.utc(lesson.startTime).local().toDate();
+    const end = moment.utc(lesson.endTime).local().toDate();
+    // Convert to BS date string (YYYY-MM-DD)
+    const bsStart = ADToBS(start);
+    const bsEnd = ADToBS(end);
+    return {
+      title: `${lesson.name} (BS: ${bsStart} - ${bsEnd})`,
+      start,
+      end,
+    };
+  });
 
   const schedule = adjustScheduleToCurrentWeek(data);
 

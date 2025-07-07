@@ -1,167 +1,268 @@
 /* eslint-disable @next/next/no-img-element */
-import { format } from 'date-fns';
+import React from "react";
+import { ADToBS } from "bikram-sambat-js";
 
-type StudentWithDetails = {
-  id: string;
+export interface StudentData {
+  regNo: string;
   name: string;
-  surname: string;
-  StudentId: string;
-  bloodType: string;
-  birthday: Date;
-  phone: string | null;
-  img: string | null;
+  classGrade: string;
+  dob: string;
+  bloodGroup: string;
+  contactNo: string;
+  studentType: string;
   address: string;
-  sex: 'MALE' | 'FEMALE';
-  class: {
-    name: string;
-  };
-  grade: {
-    level: number;
-  };
-  parent?: {
-    name: string;
-    surname: string;
-    phone: string;
-  } | null;
-};
+  photoUrl?: string;
+  principalSignatureUrl?: string;
+}
 
-export const StudentIDCard = ({ 
-  student,
-  schoolYear = "2023-2024",
-  expiryDate = "2024-07-31"
-}: { 
-  student: StudentWithDetails;
-  schoolYear?: string;
-  expiryDate?: string;
-}) => {
-  const formattedBirthday = format(new Date(student.birthday), 'dd/MM/yyyy');
+interface StudentIDCardProps {
+  data: StudentData;
+  idCardRef?: React.RefObject<HTMLDivElement>;
+}
 
-  return (
-    <div id="student-id-card" className="bg-white rounded-lg shadow-xl overflow-hidden w-80 mx-auto">
-      {/* Header with school name and logo */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-white p-1 rounded-full">
-              <img 
-                src="/logo.png" 
-                alt="School Logo" 
-                width={32} 
-                height={32} 
-                className="h-8 w-8" 
-                crossOrigin="anonymous"
-              />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight">Academix School</h1>
-              <p className="text-xs text-blue-100">Student Identification</p>
-            </div>
-          </div>
+// Helper to convert AD date string to BS string
+function toBSDate(adDate: string): string {
+  if (!adDate) return "";
+  try {
+    // Accepts "YYYY-MM-DD" or "YYYY/MM/DD"
+    const [y, m, d] = adDate.split(/-|\//).map(Number);
+    // ADToBS expects "YYYY-MM-DD"
+    const adString = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const bsDate = ADToBS(adString); // returns "YYYY-MM-DD"
+    return bsDate;
+  } catch {
+    return adDate;
+  }
+}
+
+const CARD_WIDTH = 350;
+const CARD_HEIGHT = 550;
+
+const StudentIDCard: React.FC<StudentIDCardProps> = ({ data, idCardRef }) => (
+  <div
+    ref={idCardRef}
+    style={{
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+      background: "linear-gradient(to bottom, #7c4dbe 0%, #eae6f7 60%)",
+      borderRadius: 16,
+      boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+      position: "relative",
+      overflow: "hidden",
+      fontFamily: "Arial, sans-serif",
+      border: "2px solid #7c4dbe",
+      margin: "0 auto",
+      padding: 0,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "flex-start",
+    }}
+  >
+    {/* Header */}
+    <div
+      style={{
+        background: "#7c4dbe",
+        color: "white",
+        padding: "10px 16px 6px 16px",
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+        position: "relative",
+        minHeight: 90,
+      }}
+    >
+      <div style={{ fontSize: 12, fontWeight: "bold", position: "absolute", left: 10, top: 8 }}>
+        Regd.No.:
+      </div>
+      <div style={{ fontSize: 12, fontWeight: "bold", position: "absolute", right: 10, top: 8 }}>
+        {data.regNo}
+      </div>
+      <div style={{ textAlign: "center", marginTop: 18 }}>
+        <div style={{ fontSize: 15, fontWeight: "bold", lineHeight: 1.1 }}>
+          SHREE NARAYANI GANDAKI SADHARAN TATHA<br />
+          SANSKRIT SECONDARY SCHOOL
+        </div>
+        <div style={{ fontSize: 11, marginTop: 2 }}>
+          Binayi Triveni-6, Trivenidham<br />
+          Estd.: 2022 B.S.<br />
+          <span style={{ fontSize: 10 }}>narayanigandakiss@gmail.com</span>
         </div>
       </div>
-
-      {/* Photo and basic info */}
-      <div className="p-4 flex">
-        <div className="mr-4">
-          {student.img ? (
-            <img
-              src={student.img} 
-              alt={`${student.name}'s photo`} 
-              width={80} 
-              height={100} 
-              className="object-cover border-2 border-gray-200 rounded"
-              crossOrigin="anonymous"
-            />
-          ) : (
-            <div className="w-20 h-24 bg-gray-200 flex items-center justify-center rounded border-2 border-gray-300">
-              <span className="text-gray-400 text-xs">{student.sex === 'MALE' ? '♂' : '♀'}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1">
-          <h2 className="text-lg font-bold text-gray-800">{student.name} {student.surname}</h2>
-          <div className="mt-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full inline-block">
-            {student.StudentId}
-          </div>
-          <p className="text-sm text-gray-600 mt-1">Class: {student.class.name}</p>
-          <p className="text-sm text-gray-600">Grade: {student.grade.level}</p>
-        </div>
-      </div>
-
-      {/* Additional details */}
-      <div className="px-4 pb-3">
-        <div className="border-t pt-3 grid grid-cols-2 gap-x-2 gap-y-1">
-          <div className="text-sm flex flex-col space-y-1">
-            <div>
-              <span className="text-gray-500 text-xs">DOB:</span>
-              <p className="font-medium text-gray-700">{formattedBirthday}</p>
-            </div>
-            <div>
-              <span className="text-gray-500 text-xs">Blood:</span>
-              <p className="font-medium text-gray-700">{student.bloodType}</p>
-            </div>
-          </div>
-          <div className="text-sm flex flex-col space-y-1">
-            <div>
-              <span className="text-gray-500 text-xs">Gender:</span>
-              <p className="font-medium text-gray-700">{student.sex === 'MALE' ? 'Male' : 'Female'}</p>
-            </div>
-            {student.phone && (
-              <div>
-                <span className="text-gray-500 text-xs">Phone:</span>
-                <p className="font-medium text-gray-700">{student.phone}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {student.parent && (
-          <div className="mt-2 pt-2 border-t border-dashed border-gray-200">
-            <h3 className="text-xs text-gray-500 mb-1">Emergency Contact:</h3>
-            <p className="text-xs font-medium">{student.parent.name} {student.parent.surname}</p>
-            <p className="text-xs">{student.parent.phone}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Validity info */}
-      <div className="bg-blue-50 px-4 py-2 border-t border-blue-100">
-        <div className="flex justify-between text-xs">
-          <div>
-            <p className="text-gray-500">School Year</p>
-            <p className="font-semibold text-gray-800">{schoolYear}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-gray-500">Valid Until</p>
-            <p className="font-semibold text-gray-800">{expiryDate}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer with barcode */}
-      <div className="bg-gray-50 p-2 border-t border-gray-200">
-        <div className="flex justify-between items-center">
-          <div className="text-xs text-gray-500 flex-1">
-            <p>If found, please return to:</p>
-            <p className="font-medium">Academix School</p>
-          </div>
-          <div className="w-24">
-            <div className="h-10">
-              <div className="h-full flex items-end">
-                {Array.from({ length: 20 }).map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="h-full bg-gray-900 w-1 mx-0.5" 
-                    style={{ height: `${Math.max(40, Math.random() * 100)}%` }}
-                  />
-                ))}
-              </div>
-            </div>
-            <p className="text-center text-xs text-gray-500 mt-1">{student.StudentId}</p>
-          </div>
-        </div>
+      <div style={{ position: "absolute", left: 10, top: 28 }}>
+        <svg width="38" height="38" viewBox="0 0 38 38">
+          <polygon
+            points="19,3 23,15 36,15 25,23 29,35 19,27 9,35 13,23 2,15 15,15"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="1.5"
+          />
+        </svg>
       </div>
     </div>
-  );
-};
+
+    {/* Main Content */}
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+        marginTop: 10,
+        marginBottom: 10,
+      }}
+    >
+      {/* Photo */}
+      <div
+        style={{
+          width: 120,
+          height: 120,
+          borderRadius: "50%",
+          background: "white",
+          border: "4px solid #7c4dbe",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+          zIndex: 2,
+          marginBottom: 10,
+        }}
+      >
+        <img
+          src={data.photoUrl || "/api/placeholder/120/120"}
+          alt="Student"
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+      </div>
+
+      {/* Name and Class */}
+      <div style={{ width: "100%", textAlign: "center", marginBottom: 6 }}>
+        <div
+          style={{
+            fontSize: 22,
+            fontWeight: "bold",
+            color: "#1976d2",
+            letterSpacing: 1,
+            marginBottom: 4,
+          }}
+        >
+          {data.name}
+        </div>
+        <div
+          style={{
+            display: "inline-block",
+            background: "#7c4dbe",
+            color: "white",
+            fontWeight: "bold",
+            fontSize: 16,
+            borderRadius: 6,
+            padding: "2px 18px",
+            marginBottom: 4,
+            maxWidth: 180,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+          title={data.classGrade}
+        >
+          {data.classGrade}
+        </div>
+      </div>
+
+      {/* Details Section - moved up and left */}
+      <div
+        style={{
+          width: "100%",
+          padding: "0 24px",
+          fontSize: 15,
+          color: "#222",
+          lineHeight: 1.8,
+          marginTop: -20,
+          marginLeft: -10,
+          textAlign: "left",
+        }}
+      >
+        {[
+          ["DOB", data.dob],
+          ["Blood Group", data.bloodGroup],
+          ["Contact No.", data.contactNo],
+          ["Student Type", data.studentType],
+          ["Address", data.address],
+        ].map(([label, value]) => (
+          <div key={label} style={{ display: "flex", marginBottom: 6 }}>
+            <div style={{ width: 110, fontWeight: "bold" }}>{label}</div>
+            <div>: {value || "-"}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Signature and Principal */}
+    <div
+      style={{
+        position: "absolute",
+        bottom: 38,
+        left: 24,
+        width: "120px",
+        height: "28px",
+        display: "flex",
+        alignItems: "flex-end",
+      }}
+    >
+      {data.principalSignatureUrl ? (
+        <img
+          src={data.principalSignatureUrl}
+          alt="Principal Signature"
+          style={{
+            maxHeight: "28px",
+            maxWidth: "100%",
+            objectFit: "contain",
+            opacity: 0.85,
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            width: "100%",
+            height: "20px",
+            borderBottom: "1px solid #aaa",
+            opacity: 0.5,
+          }}
+        ></div>
+      )}
+    </div>
+    <div
+      style={{
+        position: "absolute",
+        bottom: 38,
+        right: 24,
+        fontSize: 14,
+        color: "#7c4dbe",
+        fontWeight: "bold",
+        textAlign: "right",
+        width: "120px",
+      }}
+    >
+      Principal
+    </div>
+    <div
+      style={{
+        position: "absolute",
+        bottom: 0,
+        width: "100%",
+        background: "#7c4dbe",
+        color: "white",
+        fontSize: 13,
+        textAlign: "center",
+        padding: "7px 0",
+        fontStyle: "italic",
+        borderBottomLeftRadius: 16,
+        borderBottomRightRadius: 16,
+      }}
+    >
+      If found, kindly return to the school.
+    </div>
+  </div>
+);
+
+export default StudentIDCard;

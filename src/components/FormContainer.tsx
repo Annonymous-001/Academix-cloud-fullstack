@@ -47,6 +47,8 @@ export type FormContainerProps = {
     | "payment"
     | "finance"
     | "teacherattendance"
+    | "accountant"
+    | "bulkFee"
   type: "create" | "update" | "delete";
   data?: any;
   id?: number | string;
@@ -94,18 +96,20 @@ export const FormContainer = async ({
           select: { id: true, level: true },
         });
         const studentClasses = await prisma.class.findMany({
-          include: { _count: { select: { students: true } } },
+          select: { id: true, name: true },
         });
         relatedData = { classes: studentClasses, grades: studentGrades };
         break;
       case "exam":
-        const examLessons = await prisma.lesson.findMany({
-          where: {
-            ...(role === "teacher" ? { teacherId: currentUserId! } : {}),
-          },
-          select: { id: true, name: true },
-        });
-        relatedData = { lessons: examLessons };
+        const [examSubjects, examClasses] = await Promise.all([
+          prisma.subject.findMany({
+            select: { id: true, name: true },
+          }),
+          prisma.class.findMany({
+            select: { id: true, name: true },
+          }),
+        ]);
+        relatedData = { subjects: examSubjects, classes: examClasses };
         break;
       case "lesson":
         const [lessonSubjects, lessonClasses, lessonTeachers] = await Promise.all([
@@ -140,10 +144,11 @@ export const FormContainer = async ({
         relatedData = { lessons: assignmentLessons };
         break;
       case "result":
-        const [resultStudents, resultExams, resultAssignments] = await Promise.all([
-          prisma.student.findMany({
+        // Use Enrollment to get students and their classes
+        const [resultEnrollments, resultExams, resultAssignments] = await Promise.all([
+          prisma.enrollment.findMany({
             where: {
-              ...(role === "teacher" ? { 
+              ...(role === "teacher" ? {
                 class: {
                   lessons: {
                     some: { teacherId: currentUserId! }
@@ -151,22 +156,26 @@ export const FormContainer = async ({
                 }
               } : {}),
             },
-            select: { 
-              id: true, 
-              name: true,
-              surname: true 
-            },
+            include: {
+              student: {
+                select: { id: true, name: true, surname: true, StudentId: true }
+              },
+              class: {
+                select: { name: true }
+              }
+            }
           }),
           prisma.exam.findMany({
             where: {
-              lesson: {
-                ...(role === "teacher" ? { teacherId: currentUserId! } : {})
-              }
+              ...(role === "teacher" ? {
+                subject: {
+                  teachers: {
+                    some: { id: currentUserId! }
+                  }
+                }
+              } : {})
             },
-            select: { 
-              id: true, 
-              title: true 
-            },
+            select: { id: true, title: true },
           }),
           prisma.assignment.findMany({
             where: {
@@ -174,12 +183,17 @@ export const FormContainer = async ({
                 ...(role === "teacher" ? { teacherId: currentUserId! } : {})
               }
             },
-            select: { 
-              id: true, 
-              title: true 
-            },
+            select: { id: true, title: true },
           }),
         ]);
+        // Flatten students from enrollments for the form
+        const resultStudents = resultEnrollments.map(e => ({
+          id: e.student.id,
+          name: e.student.name,
+          surname: e.student.surname,
+          StudentId: e.student.StudentId,
+          className: e.class.name
+        }));
         relatedData = { 
           students: resultStudents, 
           exams: resultExams, 
@@ -223,9 +237,20 @@ export const FormContainer = async ({
         break;
       case "fee":
         const feeStudents = await prisma.student.findMany({
-          select: { id: true, name: true, surname: true },
+          where: {
+            enrollments: {
+              some: {
+                year: 2082
+              }
+            }
+          },
+          select: { id: true, name: true, surname: true, StudentId: true },
         });
         relatedData = { students: feeStudents };
+        break;
+      case "bulkFee":
+        // For bulk fee creation, we don't need additional data
+        relatedData = { classId: data?.classId, className: data?.className };
         break;
       case "payment":
         relatedData = {
@@ -234,7 +259,6 @@ export const FormContainer = async ({
               status: {
                 in: ['UNPAID', 'PARTIAL', 'OVERDUE']  // Only show fees that need payment
               },
-              // Only include fees with remaining balance
               totalAmount: {
                 gt: 0  // totalAmount > 0
               }
@@ -250,11 +274,8 @@ export const FormContainer = async ({
                   id: true,
                   name: true,
                   surname: true,
-                  class: {
-                    select: {
-                      name: true
-                    }
-                  }
+                  StudentId: true
+                  // Removed class
                 }
               }
             },
@@ -307,27 +328,33 @@ export const FormContainer = async ({
           }
         });
 
-        // Get students for the available classes
+        // Get students for the available classes and year (latest year)
+        const latestYear = await prisma.enrollment.aggregate({
+          _max: { year: true }
+        });
         const availableStudents = await prisma.student.findMany({
           where: {
-            classId: {
-              in: availableClasses.map(c => c.id)
+            enrollments: {
+              some: {
+                classId: { in: availableClasses.map(c => c.id) },
+                year: latestYear._max.year ?? undefined,
+                leftAt: null
+              }
             }
           },
-          select: {
-            id: true,
-            name: true,
-            surname: true,
-            StudentId: true,
-            classId: true,
-            class: {
-              select: {
-                name: true
+          include: {
+            enrollments: {
+              where: {
+                classId: { in: availableClasses.map(c => c.id) },
+                year: latestYear._max.year ?? undefined,
+                leftAt: null
+              },
+              include: {
+                class: true
               }
             }
           }
         });
-
         relatedData = { 
           classes: availableClasses,
           lessons: availableLessons,

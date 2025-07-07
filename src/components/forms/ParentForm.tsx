@@ -10,7 +10,16 @@ import { useFormState } from "react-dom";
 import { createParent, updateParent } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+import { ADToBS, BSToAD } from "bikram-sambat-js";
+import ErrorDisplay from "../ui/error-display";
 
+// Add this type definition after imports
+type FormState = {
+  success: boolean;
+  error: boolean;
+  message?: string;
+  details?: any;
+}
 
 const ParentForm = ({
   type,
@@ -27,46 +36,101 @@ const ParentForm = ({
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
   } = useForm<ParentSchema>({
     resolver: zodResolver(parentSchema),
   });
 
-  
+  const [loading, setLoading] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [bsBirthday, setBsBirthday] = useState<string>("");
 
-  const [state, formAction] = useFormState(
-    type === "create" ? createParent : updateParent,
+  // Convert AD date to BS when component mounts or data changes
+  useEffect(() => {
+    if (data?.birthday) {
+      const adDate = new Date(data.birthday);
+      const bsDate = ADToBS(adDate.toISOString().split("T")[0]);
+      setBsBirthday(bsDate);
+    }
+  }, [data]);
+
+  // Handle BS date change
+  const handleBSDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const bsDate = e.target.value;
+    setBsBirthday(bsDate);
+
+    // Convert BS date to AD and set form value
+    try {
+      const adDate = BSToAD(bsDate);
+      // Create a new Date object directly from the AD date string
+      const dateObj = new Date(adDate);
+      setValue("birthday", dateObj);
+    } catch (error) {
+      console.error("Invalid BS date format");
+    }
+  };
+
+  const [state, formAction] = useFormState<FormState, ParentSchema>(
+    async (_, data) => {
+      if (type === "create") {
+        return createParent({ success: false, error: false, message: "" }, data);
+      }
+      return updateParent({ success: false, error: false, message: "" }, data);
+    },
     {
       success: false,
       error: false,
-      message: ""
+      message: "",
+      details: null,
     }
   );
 
-  const onSubmit = handleSubmit((data) => {
-    console.log("Submitting parent form:", data);
-    formAction(data);
+  const onSubmit = handleSubmit(async (formData) => {
+    setLoading(true);
+    setShowError(false);
+    formAction(formData);
+    setLoading(false);
   });
 
   const router = useRouter();
 
   useEffect(() => {
     if (state.success) {
-      toast(`Parent has been ${type === "create" ? "created" : "updated"}!`);
+      toast.success(`Parent has been ${type === "create" ? "created" : "updated"}!`);
       setOpen(false);
       router.refresh();
+    }
+    if (state.error) {
+      setShowError(true);
+      toast.error(state.message || "Something went wrong!");
+    }
+    if (state.success || state.error) {
+      setLoading(false);
     }
   }, [state, router, type, setOpen]);
 
   const { students } = relatedData || { students: [] };
 
   // Get existing student IDs for update form
-  const existingStudentIds = relatedData?.students?.map((student: any) => student.StudentId).join(',') || '';
+  const existingStudentIds =
+    relatedData?.students?.map((student: any) => student.StudentId).join(",") ||
+    "";
 
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
         {type === "create" ? "Create a new parent" : "Update the parent"}
       </h1>
+
+      {showError && state.error && (
+        <ErrorDisplay
+          error={state.details || state.message || "An error occurred"}
+          title="Error Details"
+          onClose={() => setShowError(false)}
+          className="mb-4"
+        />
+      )}
+
       <span className="text-xs text-gray-400 font-medium">
         Authentication Information
       </span>
@@ -97,7 +161,7 @@ const ParentForm = ({
       <span className="text-xs text-gray-400 font-medium">
         Personal Information
       </span>
-      
+
       <div className="flex justify-between flex-wrap gap-4">
         <InputField
           label="First Name"
@@ -127,13 +191,27 @@ const ParentForm = ({
           register={register}
           error={errors.address}
         />
+        <div className="flex flex-col gap-2 w-full md:w-1/4">
+          <label className="text-xs text-gray-500">Birthday (BS)</label>
+          <input
+            type="text"
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+            placeholder="YYYY-MM-DD"
+            value={bsBirthday}
+            onChange={handleBSDateChange}
+          />
+          {errors.birthday?.message && (
+            <p className="text-xs text-red-400">
+              {errors.birthday.message.toString()}
+            </p>
+          )}
+        </div>
         <InputField
           label="Student IDs(Optional)"
           name="studentId"
           defaultValue={type === "update" ? existingStudentIds : ""}
           register={register}
           error={errors?.studentId}
-        
         />
 
         {data && (
@@ -147,11 +225,22 @@ const ParentForm = ({
           />
         )}
       </div>
-      {state.error && (
-        <span className="text-red-500">Something went wrong!</span>
-      )}
-      <button type="submit" className="bg-blue-400 text-white p-2 rounded-md">
-        {type === "create" ? "Create" : "Update"}
+      <button
+        type="submit"
+        disabled={loading}
+        className={`p-2 rounded-md text-white transition ${
+          loading
+            ? "bg-blue-300 cursor-not-allowed"
+            : "bg-blue-400 hover:bg-blue-500"
+        }`}
+      >
+        {loading
+          ? type === "create"
+            ? "Creating..."
+            : "Updating..."
+          : type === "create"
+          ? "Create"
+          : "Update"}
       </button>
     </form>
   );

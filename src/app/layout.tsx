@@ -4,6 +4,7 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Analytics } from '@vercel/analytics/next';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -46,17 +47,19 @@ export default function RootLayout({
       <html lang="en">
         <body className={inter.className}>
           {children}
+          <Analytics />
           <ToastContainer
             position="bottom-center"
-            theme="light"
             autoClose={3000}
             hideProgressBar={false}
-            newestOnTop
+            newestOnTop={false}
             closeOnClick
+            rtl={false}
             pauseOnFocusLoss
             draggable
             pauseOnHover
-            className="text-sm"
+            theme="light"
+            toastClassName="text-sm"
           />
         </body>
       </html>
