@@ -13,15 +13,7 @@ const UserCard = async ({
     parent: prisma.parent,
   };
 
-  let data;
-  if (type === "student") {
-    // Count unique students enrolled in 2082
-    data = await prisma.enrollment.count({
-      where: { year: 2082 },
-    });
-  } else {
-    data = await modelMap[type].count();
-  }
+  const data = await modelMap[type].count();
 
   return (
     <div className="rounded-2xl odd:bg-blue-200 even:bg-green-300 p-4 flex-1 min-w-[130px]">

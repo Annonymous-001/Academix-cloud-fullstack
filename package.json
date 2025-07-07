@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "npx prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@clerk/elements": "^0.23.25",
@@ -55,10 +56,10 @@
     "recharts": "^2.12.7",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@faker-js/faker": "^8.4.1"
   },
   "devDependencies": {
-    "@faker-js/faker": "^9.7.0",
     "@types/node": "^20.17.28",
     "@types/react": "^18",
     "@types/react-dom": "^18",
@@ -71,6 +72,6 @@
     "typescript": "^5.8.2"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed1.ts"
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   }
 }
