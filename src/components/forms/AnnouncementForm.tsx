@@ -12,7 +12,6 @@ import { useFormState } from "react-dom";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
-import BikramSambatDatePicker from "../BikramSambatDatePicker";
 import ErrorDisplay from "../ui/error-display";
 
 const AnnouncementForm = ({
@@ -56,16 +55,6 @@ const AnnouncementForm = ({
   });
 
   const router = useRouter();
-
-  const handleDateSelect = (date: {
-    year: number;
-    month: number;
-    day: number;
-  }) => {
-    // Convert BS date to AD date (this is a simplified conversion)
-    const adDate = new Date(); // You'll need to implement proper BS to AD conversion
-    setValue("date", adDate);
-  };
 
   useEffect(() => {
     if (state.success) {
@@ -150,10 +139,13 @@ const AnnouncementForm = ({
 
         <div className="flex justify-between flex-wrap gap-4">
           <div className="flex flex-col gap-2 w-full md:w-1/2">
-            <label className="text-xs text-gray-500">
-              Date (Bikram Sambat)
-            </label>
-            <BikramSambatDatePicker onDateSelect={handleDateSelect} />
+            <label className="text-xs text-gray-500">Date (AD)</label>
+            <input
+              type="date"
+              className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+              {...register("date")}
+              defaultValue={data?.date ? new Date(data.date).toISOString().split('T')[0] : ""}
+            />
             {errors.date?.message && (
               <p className="text-xs text-red-400">
                 {errors.date.message.toString()}

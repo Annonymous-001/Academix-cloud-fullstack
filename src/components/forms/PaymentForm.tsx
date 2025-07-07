@@ -9,8 +9,6 @@ import { useFormState } from "react-dom";
 import { Dispatch, SetStateAction, useEffect, useState, useMemo } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
-import BikramSambatDatePicker from "../BikramSambatDatePicker";
-import { BSToAD } from "bikram-sambat-js";
 import ErrorDisplay from "../ui/error-display";
 
 const PaymentForm = ({
@@ -28,6 +26,7 @@ const PaymentForm = ({
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<PaymentSchema>({
     resolver: zodResolver(paymentSchema),
@@ -115,17 +114,15 @@ const PaymentForm = ({
     setTimeout(() => setIsDropdownOpen(false), 100);
   };
 
-  const handleDateSelect = (date: {
-    year: number;
-    month: number;
-    day: number;
-  }) => {
-    const bsDateString = `${date.year}-${date.month
-      .toString()
-      .padStart(2, "0")}-${date.day.toString().padStart(2, "0")}`;
-    const adDateString = BSToAD(bsDateString);
-    const adDate = new Date(adDateString);
-    setValue("date", adDate);
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = new Date(e.target.value);
+    setValue("date", date);
+  };
+
+  // Format date for input value
+  const formatDateForInput = (date: Date | undefined) => {
+    if (!date) return "";
+    return date.toISOString().slice(0, 10);
   };
 
   useEffect(() => {
@@ -250,7 +247,12 @@ const PaymentForm = ({
           <div className="w-full md:w-[48%]">
             <div className="flex flex-col gap-2">
               <label className="text-xs text-gray-500">Date</label>
-              <BikramSambatDatePicker onDateSelect={handleDateSelect} />
+              <input
+                type="date"
+                className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+                onChange={handleDateChange}
+                value={formatDateForInput(watch("date"))}
+              />
               {errors.date?.message && (
                 <p className="text-xs text-red-400">
                   {errors.date.message.toString()}

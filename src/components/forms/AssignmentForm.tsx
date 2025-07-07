@@ -12,8 +12,6 @@ import { useFormState } from "react-dom";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
-import BikramSambatDatePicker from "../BikramSambatDatePicker";
-import { BSToAD } from "bikram-sambat-js";
 import ErrorDisplay from "../ui/error-display";
 
 const AssignmentForm = ({
@@ -77,30 +75,6 @@ const AssignmentForm = ({
 
   const { lessons } = relatedData;
 
-  const handleStartDateSelect = (date: {
-    year: number;
-    month: number;
-    day: number;
-  }) => {
-    const bsDateString = `${date.year}-${date.month
-      .toString()
-      .padStart(2, "0")}-${date.day.toString().padStart(2, "0")}`;
-    const adDateString = BSToAD(bsDateString);
-    setValue("startDate", new Date(adDateString));
-  };
-
-  const handleDueDateSelect = (date: {
-    year: number;
-    month: number;
-    day: number;
-  }) => {
-    const bsDateString = `${date.year}-${date.month
-      .toString()
-      .padStart(2, "0")}-${date.day.toString().padStart(2, "0")}`;
-    const adDateString = BSToAD(bsDateString);
-    setValue("dueDate", new Date(adDateString));
-  };
-
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
@@ -161,10 +135,13 @@ const AssignmentForm = ({
 
       <div className="flex justify-between flex-wrap gap-4">
         <div className="flex flex-col gap-2 w-full md:w-1/2">
-          <label className="text-xs text-gray-500">
-            Start Date (Bikram Sambat)
-          </label>
-          <BikramSambatDatePicker onDateSelect={handleStartDateSelect} />
+          <label className="text-xs text-gray-500">Start Date (AD)</label>
+          <input
+            type="date"
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+            {...register("startDate")}
+            defaultValue={data?.startDate ? new Date(data.startDate).toISOString().split('T')[0] : ""}
+          />
           {errors.startDate?.message && (
             <p className="text-xs text-red-400">
               {errors.startDate.message.toString()}
@@ -173,10 +150,13 @@ const AssignmentForm = ({
         </div>
 
         <div className="flex flex-col gap-2 w-full md:w-1/2">
-          <label className="text-xs text-gray-500">
-            Due Date (Bikram Sambat)
-          </label>
-          <BikramSambatDatePicker onDateSelect={handleDueDateSelect} />
+          <label className="text-xs text-gray-500">Due Date (AD)</label>
+          <input
+            type="date"
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+            {...register("dueDate")}
+            defaultValue={data?.dueDate ? new Date(data.dueDate).toISOString().split('T')[0] : ""}
+          />
           {errors.dueDate?.message && (
             <p className="text-xs text-red-400">
               {errors.dueDate.message.toString()}

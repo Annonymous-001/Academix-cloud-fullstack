@@ -3,14 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import InputField from "../InputField";
-import Image from "next/image";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { parentSchema, ParentSchema } from "@/lib/formValidationSchemas";
 import { useFormState } from "react-dom";
 import { createParent, updateParent } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { ADToBS, BSToAD } from "bikram-sambat-js";
 import ErrorDisplay from "../ui/error-display";
 
 // Add this type definition after imports
@@ -37,38 +35,13 @@ const ParentForm = ({
     handleSubmit,
     formState: { errors },
     setValue,
+    watch,
   } = useForm<ParentSchema>({
     resolver: zodResolver(parentSchema),
   });
 
   const [loading, setLoading] = useState(false);
   const [showError, setShowError] = useState(false);
-  const [bsBirthday, setBsBirthday] = useState<string>("");
-
-  // Convert AD date to BS when component mounts or data changes
-  useEffect(() => {
-    if (data?.birthday) {
-      const adDate = new Date(data.birthday);
-      const bsDate = ADToBS(adDate.toISOString().split("T")[0]);
-      setBsBirthday(bsDate);
-    }
-  }, [data]);
-
-  // Handle BS date change
-  const handleBSDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const bsDate = e.target.value;
-    setBsBirthday(bsDate);
-
-    // Convert BS date to AD and set form value
-    try {
-      const adDate = BSToAD(bsDate);
-      // Create a new Date object directly from the AD date string
-      const dateObj = new Date(adDate);
-      setValue("birthday", dateObj);
-    } catch (error) {
-      console.error("Invalid BS date format");
-    }
-  };
 
   const [state, formAction] = useFormState<FormState, ParentSchema>(
     async (_, data) => {
@@ -115,6 +88,18 @@ const ParentForm = ({
   const existingStudentIds =
     relatedData?.students?.map((student: any) => student.StudentId).join(",") ||
     "";
+
+  // Handle AD date change
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = new Date(e.target.value);
+    setValue("birthday", date);
+  };
+
+  // Format date for input value
+  const formatDateForInput = (date: Date | undefined) => {
+    if (!date) return "";
+    return date.toISOString().slice(0, 10);
+  };
 
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
@@ -192,13 +177,12 @@ const ParentForm = ({
           error={errors.address}
         />
         <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Birthday (BS)</label>
+          <label className="text-xs text-gray-500">Birthday</label>
           <input
-            type="text"
+            type="date"
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            placeholder="YYYY-MM-DD"
-            value={bsBirthday}
-            onChange={handleBSDateChange}
+            onChange={handleDateChange}
+            value={formatDateForInput(watch("birthday"))}
           />
           {errors.birthday?.message && (
             <p className="text-xs text-red-400">

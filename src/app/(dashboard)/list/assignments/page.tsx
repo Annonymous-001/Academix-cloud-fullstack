@@ -8,7 +8,6 @@ import { Assignment, Class, Prisma, Subject, Teacher } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
 import FormContainer from "@/components/FormContainer";
-import { ADToBS } from "bikram-sambat-js";
 
 type AssignmentList = Assignment & {
   lesson: {
@@ -19,14 +18,14 @@ type AssignmentList = Assignment & {
 };
 
 const sortOptions = [
-  { label: "Date (Newest)", value: "date", direction: "desc" as const },
-  { label: "Date (Oldest)", value: "date", direction: "asc" as const },
+  { label: "Due Date (Newest)", value: "dueDate", direction: "desc" as const },
+  { label: "Due Date (Oldest)", value: "dueDate", direction: "asc" as const },
   { label: "Title (A-Z)", value: "title", direction: "asc" as const },
   { label: "Title (Z-A)", value: "title", direction: "desc" as const },
-  { label: "Class (A-Z)", value: "class.name", direction: "asc" as const },
-  { label: "Class (Z-A)", value: "class.name", direction: "desc" as const },
-  { label: "Teacher (A-Z)", value: "teacher.name", direction: "asc" as const },
-  { label: "Teacher (Z-A)", value: "teacher.name", direction: "desc" as const },
+  { label: "Subject (A-Z)", value: "lesson.subject.name", direction: "asc" as const },
+  { label: "Subject (Z-A)", value: "lesson.subject.name", direction: "desc" as const },
+  { label: "Class (A-Z)", value: "lesson.class.name", direction: "asc" as const },
+  { label: "Class (Z-A)", value: "lesson.class.name", direction: "desc" as const },
 ];
 
 const AssignmentListPage = async (
@@ -43,20 +42,33 @@ const AssignmentListPage = async (
   const role = (sessionClaims?.metadata as { role?: string })?.role;
   const currentUserId = userId;
 
+  const formatADDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
 
   const columns = [
     {
-      header: "Subject Name",
-      accessor: "name",
+      header: "Title",
+      accessor: "title",
+    },
+    {
+      header: "Subject",
+      accessor: "subject",
+      className: "hidden md:table-cell",
     },
     {
       header: "Class",
       accessor: "class",
+      className: "hidden lg:table-cell",
     },
     {
       header: "Teacher",
       accessor: "teacher",
-      className: "hidden md:table-cell",
+      className: "hidden lg:table-cell",
     },
     {
       header: "Due Date",
@@ -74,27 +86,29 @@ const AssignmentListPage = async (
   ];
 
   const renderRow = (item: AssignmentList) => {
-    const bsDate = ADToBS(item.dueDate.toISOString().split('T')[0]);
-    const [year, month, day] = bsDate.split('-').map(Number);
-    const monthNames = [
-      'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-      'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-    ];
-
     return (
       <tr
         key={item.id}
         className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
       >
-        <td className="flex items-center gap-4 p-4">{item.lesson.subject.name}</td>
-        <td>{item.lesson.class.name}</td>
-        <td className="hidden md:table-cell">
-          {item.lesson.teacher.name + " " + item.lesson.teacher.surname}
+        <td className="p-2 md:p-4">
+          <div className="flex flex-col gap-1">
+            <span className="font-medium">{item.title}</span>
+            <div className="flex flex-wrap gap-2 text-xs text-gray-600 md:hidden">
+              <span>Subject: {item.lesson.subject.name}</span>
+              <span>Class: {item.lesson.class.name}</span>
+              <span>Teacher: {item.lesson.teacher.name} {item.lesson.teacher.surname}</span>
+              <span>Due Date: {formatADDate(new Date(item.dueDate))}</span>
+            </div>
+          </div>
         </td>
-        <td className="hidden md:table-cell">
-          {`${monthNames[month - 1]} ${day}, ${year}`}
+        <td className="hidden md:table-cell p-2 md:p-4">{item.lesson.subject.name}</td>
+        <td className="hidden lg:table-cell p-2 md:p-4">{item.lesson.class.name}</td>
+        <td className="hidden lg:table-cell p-2 md:p-4">
+          {item.lesson.teacher.name} {item.lesson.teacher.surname}
         </td>
-        <td>
+        <td className="hidden md:table-cell p-2 md:p-4">{formatADDate(new Date(item.dueDate))}</td>
+        <td className="p-2 md:p-4">
           <div className="flex items-center gap-2">
             {(role === "admin" || role === "teacher") && (
               <>

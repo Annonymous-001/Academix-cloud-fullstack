@@ -8,7 +8,6 @@ import { Teacher } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ADToBS } from "bikram-sambat-js";
 
 const SingleTeacherPage = async (
   props: {
@@ -51,6 +50,25 @@ const SingleTeacherPage = async (
   if (!teacher) {
     return notFound();
   }
+
+  const formatBirthday = (birthday: Date | string) => {
+    if (typeof birthday === 'string') {
+      return new Date(birthday).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+    if (birthday instanceof Date && !isNaN(birthday.getTime())) {
+      return birthday.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+    return 'N/A';
+  };
+
   return (
     <div className="flex-1 p-4 flex flex-col gap-4 xl:flex-row">
       {/* LEFT */}
@@ -88,23 +106,7 @@ const SingleTeacherPage = async (
                 </div>
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
                   <Image src="/date.png" alt="" width={14} height={14} />
-                  <span>
-{(() => {
-  const adDate = new Date(teacher.birthday);
-  const year = adDate.getFullYear();
-  if (year >= 1913 && year <= 2043) {
-    return ADToBS(adDate.toISOString().split('T')[0]);
-  }
-  // Show as stored (remove time if you want just the date)
-  if (typeof teacher.birthday === 'string') {
-    return (teacher.birthday as string).split('T')[0].replace(' 00:00:00', '');
-  }
-  if (adDate instanceof Date && !isNaN(adDate.getTime())) {
-    return adDate.toISOString().split('T')[0];
-  }
-  return 'N/A';
-})()}
-                  </span>
+                  <span>{formatBirthday(teacher.birthday)}</span>
                 </div>
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
                   <Image src="/mail.png" alt="" width={14} height={14} />

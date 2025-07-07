@@ -76,7 +76,7 @@ const ClassForm = ({
   const { teachers, grades } = relatedData;
 
   return (
-    <form className="flex flex-col gap-8" onSubmit={onSubmit}>
+    <form className="flex flex-col gap-8 pt-5" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
         {type === "create" ? "Create a new class" : "Update the class"}
       </h1>

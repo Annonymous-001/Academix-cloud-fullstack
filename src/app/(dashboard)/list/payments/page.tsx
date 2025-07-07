@@ -9,7 +9,6 @@ import { Payment, Fee, Student, Class } from "@prisma/client";
 import { auth } from "@clerk/nextjs/server";
 import Image from "next/image";
 import Link from "next/link";
-import { ADToBS } from "bikram-sambat-js";
 
 type PaymentWithRelations = Payment & {
   fee: Fee & {
@@ -30,6 +29,15 @@ const PaymentsListPage = async (
   const sessionClaims = session.sessionClaims;
   const role = (sessionClaims?.metadata as { role?: string })?.role;
   const currentUserId = userId;
+  
+  const formatADDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   const columns = [
     { header: "Student", accessor: "student" },
     { header: "Class", accessor: "class" },
@@ -43,27 +51,6 @@ const PaymentsListPage = async (
   ];
 
   const renderRow = (payment: PaymentWithRelations) => {
-    const paymentDate = new Date(payment.date);
-    const adDateString = `${paymentDate.getFullYear()}-${String(
-      paymentDate.getMonth() + 1
-    ).padStart(2, "0")}-${String(paymentDate.getDate()).padStart(2, "0")}`;
-    const bsDate = ADToBS(adDateString);
-    const [year, month, day] = bsDate.split("-").map(Number);
-
-    const nepaliMonths = [
-      "बैशाख",
-      "जेठ",
-      "आषाढ",
-      "श्रावण",
-      "भाद्र",
-      "आश्विन",
-      "कार्तिक",
-      "मंसिर",
-      "पौष",
-      "माघ",
-      "फाल्गुन",
-      "चैत्र",
-    ];
     return (
       <tr
         key={payment.id}
@@ -77,7 +64,7 @@ const PaymentsListPage = async (
         })()}</td>
         <td>{Number(payment.amount).toLocaleString()}</td>
         <td>{payment.method}</td>
-        <td>{`${nepaliMonths[month - 1]} ${day}, ${year}`}</td>
+        <td>{formatADDate(new Date(payment.date))}</td>
         <td>{payment.transactionId || "N/A"}</td>
         {(role === "admin" || role === "accountant") && (
           <td>

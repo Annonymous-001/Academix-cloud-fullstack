@@ -7,7 +7,6 @@ import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Attendance, Student, Class, Lesson } from "@prisma/client";
 import { auth } from "@clerk/nextjs/server";
-import { ADToBS } from "bikram-sambat-js";
 import Image from "next/image";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 
@@ -66,22 +65,15 @@ const AttendanceListPage = async (
   const attendancePercentage = totalStudents > 0 ? ((presentToday + lateToday) / totalStudents) * 100 : 0;
   // --- End Summary Card Calculations ---
 
-  const nepaliMonths = [
-    'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-    'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-  ];
-
-  const formatBSDate = (date: Date) => {
-    const bsDate = ADToBS(date.toISOString().split('T')[0]);
-    const [year, month, day] = bsDate.split('-').map(Number);
-    return `${nepaliMonths[month - 1]} ${day-1}, ${year}`;
+  const formatADDate = (date: Date) => {
+    return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   };
 
   const columns = [
     { header: "Student", accessor: "student" },
     { header: "Class", accessor: "class" },
     { header: "Lesson", accessor: "lesson" },
-    { header: "Date (BS)", accessor: "date" },
+    { header: "Date", accessor: "date" },
     { header: "Status", accessor: "status" },
     ...(role === "admin" || role === "teacher"
       ? [{ header: "Actions", accessor: "actions" }]
@@ -101,7 +93,7 @@ const AttendanceListPage = async (
         <td className="p-4">{`${attendance.student.name} ${attendance.student.surname}`}</td>
         <td>{studentClass ? studentClass.name : "N/A"}</td>
         <td>{attendance.lesson?.name || "General"}</td>
-        <td>{formatBSDate(new Date(attendance.date))}</td>
+        <td>{formatADDate(new Date(attendance.date))}</td>
         <td>
           <span className={`px-2 py-1 rounded-full text-xs ${
             attendance.status === "PRESENT" ? "bg-green-100 text-green-800" :

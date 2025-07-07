@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
-import { ADToBS } from "bikram-sambat-js"
 
 interface AgendaEvent {
   id: string
@@ -44,22 +43,14 @@ export function AgendaSchedule({ events, initialDate = new Date(), daysToShow = 
     setCurrentDate(newDate)
   }
 
-  // Get date range for display
+  // Get date range for display (AD)
   const getDateRange = () => {
     const start = new Date(currentDate)
     const end = new Date(currentDate)
     end.setDate(end.getDate() + daysToShow - 1)
-
-    const startBS = ADToBS(start.toISOString().split('T')[0]);
-    const endBS = ADToBS(end.toISOString().split('T')[0]);
-    const [startYear, startMonth, startDay] = startBS.split('-').map(Number);
-    const [endYear, endMonth, endDay] = endBS.split('-').map(Number);
-    const monthNames = [
-      'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-      'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-    ];
-
-    return `${monthNames[startMonth - 1]} ${startDay} - ${monthNames[endMonth - 1]} ${endDay}`;
+    const startStr = start.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const endStr = end.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return `${startStr} - ${endStr}`;
   }
 
   // Get days to display
@@ -75,17 +66,12 @@ export function AgendaSchedule({ events, initialDate = new Date(), daysToShow = 
     return days
   }
 
-  // Format date for display
+  // Format date for display (AD)
   const formatDate = (date: Date) => {
-    const bsDate = ADToBS(date.toISOString().split('T')[0]);
-    const [year, month, day] = bsDate.split('-').map(Number);
-    const monthNames = [
-      'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-      'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-    ];
-    const weekDays = ['आइतबार', 'सोमबार', 'मंगलबार', 'बुधबार', 'बिहिबार', 'शुक्रबार', 'शनिबार'];
-    const weekDay = weekDays[date.getDay()];
-    return `${weekDay}, ${monthNames[month - 1]} ${day}`;
+    const weekDay = date.toLocaleDateString(undefined, { weekday: "long" });
+    const month = date.toLocaleDateString(undefined, { month: "short" });
+    const day = date.getDate();
+    return `${weekDay}, ${month} ${day}`;
   }
 
   function isOverlap(a: { startTime: string, endTime: string }, b: { startTime: string, endTime: string }) {

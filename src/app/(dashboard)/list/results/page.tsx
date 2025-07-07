@@ -8,7 +8,6 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Prisma, Result, Student, Exam, Assignment, Lesson, Teacher, Class, Subject } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
-import { ADToBS } from "bikram-sambat-js";
 
 type ResultList = {
   id: number;
@@ -59,6 +58,14 @@ const ResultListPage = async (
   const role = (sessionClaims?.metadata as { role?: string })?.role;
   const currentUserId = userId;
 
+  const formatADDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   const columns = [
     {
       header: "Title",
@@ -100,7 +107,7 @@ const ResultListPage = async (
 
   const renderRow = (item: ResultList) => {
     const date = new Date(item.startTime);
-    const bsDate = ADToBS(date.toISOString().split("T")[0]);
+    const adDate = formatADDate(date);
     const time = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 
     return (
@@ -116,7 +123,7 @@ const ResultListPage = async (
               <span>Score: {item.score}</span>
               <span>Teacher: {item.teacherName} {item.teacherSurname}</span>
               <span>Class: {item.className}</span>
-              <span>Date: {`${bsDate} ${time}`}</span>
+              <span>Date: {`${adDate} ${time}`}</span>
             </div>
           </div>
         </td>
@@ -126,7 +133,7 @@ const ResultListPage = async (
           {item.teacherName + " " + item.teacherSurname}
         </td>
         <td className="hidden md:table-cell p-2 md:p-4">{item.className}</td>
-        <td className="hidden md:table-cell p-2 md:p-4">{`${bsDate} ${time}`}</td>
+        <td className="hidden md:table-cell p-2 md:p-4">{`${adDate} ${time}`}</td>
         <td className="p-2 md:p-4">
           <div className="flex items-center gap-2">
             {(role === "admin" || role === "teacher") && (

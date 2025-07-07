@@ -5,7 +5,6 @@ import { useEffect, useState, useRef } from 'react';
 import html2pdf from 'html2pdf.js';
 import { Fee, Payment, Student } from '@prisma/client';
 import { getFeeReceiptData } from '@/lib/actions';
-import { ADToBS } from 'bikram-sambat-js';
 
 type FeeWithDetails = Fee & {
   student: Student & {
@@ -27,17 +26,8 @@ export default function ReceiptPage(props: { params: { id: string } }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
 
-  const nepaliMonths = [
-    'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-    'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-  ];
-
-  const formatBSDate = (date: Date) => {
-    // Adjust for timezone by creating a new date with local timezone
-    const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const bsDate = ADToBS(localDate.toISOString().split('T')[0]);
-    const [year, month, day] = bsDate.split('-').map(Number);
-    return `${nepaliMonths[month - 1]} ${day}, ${year}`;
+  const formatADDate = (date: Date) => {
+    return new Date(date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   };
 
   useEffect(() => {
@@ -184,7 +174,7 @@ export default function ReceiptPage(props: { params: { id: string } }) {
           </div>
           <div className="text-right">
             <p className="text-[10px] text-purple-100">Receipt #{receiptNumber}</p>
-            <p className="text-[10px] text-purple-100">{formatBSDate(new Date())}</p>
+            <p className="text-[10px] text-purple-100">{formatADDate(new Date())}</p>
           </div>
         </div>
       </div>
@@ -227,7 +217,7 @@ export default function ReceiptPage(props: { params: { id: string } }) {
               <span className="font-medium">Description:</span> {fee.description || 'N/A'}
             </p>
             <p className="text-xs text-gray-600">
-              <span className="font-medium">Due Date:</span> {formatBSDate(new Date(fee.dueDate))}
+              <span className="font-medium">Due Date:</span> {formatADDate(new Date(fee.dueDate))}
             </p>
           </div>
           <div>
@@ -261,7 +251,7 @@ export default function ReceiptPage(props: { params: { id: string } }) {
             <tbody className="bg-white divide-y divide-gray-200">
               {fee.payments.map((payment) => (
                 <tr key={payment.id}>
-                  <td className="px-1 py-1">{formatBSDate(new Date(payment.date))}</td>
+                  <td className="px-1 py-1">{formatADDate(new Date(payment.date))}</td>
                   <td className="px-1 py-1">{payment.transactionId || 'N/A'}</td>
                   <td className="px-1 py-1">{payment.method}</td>
                   <td className="px-1 py-1">{payment.reference || 'N/A'}</td>
@@ -277,7 +267,7 @@ export default function ReceiptPage(props: { params: { id: string } }) {
       <div className="p-2 bg-gray-50 border-t">
         <div className="flex justify-between items-center">
           <div className="text-xs text-gray-600">
-            <p>Generated on {formatBSDate(new Date())}</p>
+            <p>Generated on {formatADDate(new Date())}</p>
             <p className="mt-0.5">Academix Cloud School Management System</p>
           </div>
           <div className="text-right">

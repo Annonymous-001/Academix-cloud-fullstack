@@ -5,7 +5,6 @@ import StudentIDCard, { StudentData } from "@/components/StudentIDCard";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { getStudentIdCardData } from "@/lib/actions";
-import { ADToBS } from "bikram-sambat-js";
 
 export default function IDCardPage({ params }: { params: { id: string } }) {
   const [form, setForm] = useState<StudentData>({
@@ -77,6 +76,16 @@ export default function IDCardPage({ params }: { params: { id: string } }) {
     pdf.save(`${form.name.replace(/\s+/g, "_")}_ID_Card.pdf`);
   };
 
+  const formatADDate = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   return (
     <div
       style={{
@@ -130,14 +139,11 @@ export default function IDCardPage({ params }: { params: { id: string } }) {
               style={{ width: "100%" }}
             />
           </div>
-          {/* AD input */}
-        
-          {/* BS display */}
           <div style={{ marginBottom: 12 }}>
-            <label>Date of Birth (B.S.):</label>
+            <label>Date of Birth (AD):</label>
             <input
               type="text"
-              value={form.dob ? ADToBS(form.dob) : ""}
+              value={formatADDate(form.dob)}
               readOnly
               style={{ width: "100%", background: "#f3f3f3" }}
             />
@@ -208,7 +214,7 @@ export default function IDCardPage({ params }: { params: { id: string } }) {
           <StudentIDCard
             data={{
               ...form,
-              dob: form.dob ? ADToBS(form.dob) : "",
+              dob: formatADDate(form.dob),
             }}
             idCardRef={idCardRef}
           />

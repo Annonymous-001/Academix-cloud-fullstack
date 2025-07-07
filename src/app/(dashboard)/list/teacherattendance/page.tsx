@@ -8,7 +8,6 @@ import { TeacherAttendance, Teacher } from "@prisma/client";
 import { auth } from "@clerk/nextjs/server";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import SortDropdown from "@/components/SortDropdown";
-import { ADToBS } from "bikram-sambat-js";
 
 type TeacherAttendanceWithRelations = TeacherAttendance & {
   teacher: Teacher;
@@ -35,15 +34,12 @@ const TeacherAttendanceListPage = async (
   const role = (sessionClaims?.metadata as { role?: string })?.role;
   const currentUserId = userId;
 
-  const nepaliMonths = [
-    'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-    'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-  ];
-
-  const formatBSDate = (date: Date) => {
-    const bsDate = ADToBS(date.toISOString().split('T')[0]);
-    const [year, month, day] = bsDate.split('-').map(Number);
-    return `${nepaliMonths[month - 1]} ${day}, ${year}`;
+  const formatADDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
   // --- Fetch all attendance for summary cards ---
@@ -83,7 +79,7 @@ const TeacherAttendanceListPage = async (
 
   const columns = [
     { header: "Teacher", accessor: "teacher" },
-    { header: "Date (BS)", accessor: "date" },
+    { header: "Date (AD)", accessor: "date" },
     { header: "In Time", accessor: "inTime" },
     { header: "Out Time", accessor: "outTime" },
     { header: "Status", accessor: "status" },
@@ -96,7 +92,7 @@ const TeacherAttendanceListPage = async (
       className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
     >
       <td className="p-4">{`${attendance.teacher.name} ${attendance.teacher.surname}`}</td>
-      <td>{formatBSDate(new Date(attendance.date))}</td>
+      <td>{formatADDate(new Date(attendance.date))}</td>
       <td>
         {attendance.inTime ? attendance.inTime : "-"}
       </td>

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ADToBS } from "bikram-sambat-js"
 
 interface Event {
   id: string
@@ -28,15 +27,9 @@ export function CardSchedule({ events, initialDate = new Date() }: CardScheduleP
   const [currentDate, setCurrentDate] = useState(initialDate)
   const [view, setView] = useState<"day" | "week" | "month">("week")
 
-  // Format date for display
+  // Format date for display (AD)
   const formatDate = (date: Date) => {
-    const bsDate = ADToBS(date.toISOString().split('T')[0]);
-    const [year, month, day] = bsDate.split('-').map(Number);
-    const monthNames = [
-      'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-      'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-    ];
-    return `${monthNames[month - 1]} ${day}, ${year}`;
+    return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   }
 
   // Navigate to previous/next period
@@ -64,39 +57,23 @@ export function CardSchedule({ events, initialDate = new Date() }: CardScheduleP
     setCurrentDate(newDate)
   }
 
-  // Get date range for display
+  // Get date range for display (AD)
   const getDateRange = () => {
     if (view === "day") {
       return formatDate(currentDate)
     }
-
     if (view === "week") {
       const startOfWeek = new Date(currentDate)
       const day = startOfWeek.getDay()
       startOfWeek.setDate(startOfWeek.getDate() - day)
-
       const endOfWeek = new Date(startOfWeek)
       endOfWeek.setDate(endOfWeek.getDate() + 6)
-
-      const startBS = ADToBS(startOfWeek.toISOString().split('T')[0]);
-      const endBS = ADToBS(endOfWeek.toISOString().split('T')[0]);
-      const [startYear, startMonth, startDay] = startBS.split('-').map(Number);
-      const [endYear, endMonth, endDay] = endBS.split('-').map(Number);
-      const monthNames = [
-        'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-        'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-      ];
-
-      return `${monthNames[startMonth - 1]} ${startDay} - ${monthNames[endMonth - 1]} ${endDay}`;
+      const startStr = startOfWeek.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const endStr = endOfWeek.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      return `${startStr} - ${endStr}`;
     }
-
-    const bsDate = ADToBS(currentDate.toISOString().split('T')[0]);
-    const [year, month] = bsDate.split('-').map(Number);
-    const monthNames = [
-      'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-      'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-    ];
-    return `${monthNames[month - 1]} ${year}`;
+    // Month view
+    return currentDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   }
 
   // Filter events based on current view

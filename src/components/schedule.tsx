@@ -4,7 +4,6 @@ import * as React from "react"
 import { useState } from "react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { ADToBS } from "bikram-sambat-js"
 
 interface ScheduleEvent {
   id: string
@@ -31,30 +30,18 @@ export function Schedule({
 }: ScheduleProps) {
   const [view, setView] = useState<"week" | "day" | "work-week">(initialView)
 
-  // Format date range for display
+  // Format date range for display (AD)
   const formatDateRange = (date: Date, viewType: "week" | "day" | "work-week") => {
     const start = new Date(date)
-    const monthNames = [
-      'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-      'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-    ];
-
     if (viewType === "day") {
-      const bsDate = ADToBS(start.toISOString().split('T')[0]);
-      const [year, month, day] = bsDate.split('-').map(Number);
-      return `${monthNames[month - 1]} ${day}`;
+      return start.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
     }
-
     const end = new Date(date)
     const daysToAdd = viewType === "work-week" ? 4 : 6
     end.setDate(end.getDate() + daysToAdd)
-
-    const startBS = ADToBS(start.toISOString().split('T')[0]);
-    const endBS = ADToBS(end.toISOString().split('T')[0]);
-    const [startYear, startMonth, startDay] = startBS.split('-').map(Number);
-    const [endYear, endMonth, endDay] = endBS.split('-').map(Number);
-
-    return `${monthNames[startMonth - 1]} ${startDay} - ${endDay}`;
+    const startStr = start.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const endStr = end.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return `${startStr} - ${endStr}`;
   }
 
   // Generate time slots

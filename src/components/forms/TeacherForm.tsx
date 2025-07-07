@@ -11,7 +11,6 @@ import { createTeacher, updateTeacher } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { CldUploadWidget } from "next-cloudinary";
-import { ADToBS, BSToAD } from "bikram-sambat-js";
 import ErrorDisplay from "../ui/error-display";
 
 // Add this type definition after imports
@@ -46,23 +45,8 @@ const TeacherForm = ({
   });
 
   const [img, setImg] = useState<any>();
-  const [bsBirthday, setBsBirthday] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [showError, setShowError] = useState(false);
-
-  // Convert AD date to BS when component mounts or data changes
-  useEffect(() => {
-    if (data?.birthday) {
-      const adDate = new Date(data.birthday);
-      const year = adDate.getFullYear();
-      if (!isNaN(adDate.getTime()) && year >= 1913 && year <= 2043) {
-        const bsDate = ADToBS(adDate.toISOString().split('T')[0]);
-        setBsBirthday(bsDate);
-      } else {
-        setBsBirthday("");
-      }
-    }
-  }, [data]);
 
   // Set existing image when updating
   useEffect(() => {
@@ -84,22 +68,6 @@ const TeacherForm = ({
       setValue('subjects', subjectIds);
     }
   }, [data, type, setValue]);
-
-  // Handle BS date change
-  const handleBSDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const bsDate = e.target.value;
-    setBsBirthday(bsDate);
-    
-    // Convert BS date to AD and set form value
-    try {
-      const adDate = BSToAD(bsDate);
-      // Convert to ISO string and create a new Date object
-      const dateObj = new Date(adDate);
-      setValue('birthday', dateObj.toISOString());
-    } catch (error) {
-      console.error('Invalid BS date format');
-    }
-  };
 
   const [state, formAction] = useFormState<FormState, TeacherSchema>(
     async (_, data) => {
@@ -261,13 +229,12 @@ const TeacherForm = ({
           error={errors.bloodType}
         />
         <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Birthday (BS)</label>
+          <label className="text-xs text-gray-500">Birthday (AD)</label>
           <input
-            type="text"
+            type="date"
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            placeholder="YYYY-MM-DD"
-            value={bsBirthday}
-            onChange={handleBSDateChange}
+            {...register("birthday")}
+            defaultValue={data?.birthday ? new Date(data.birthday).toISOString().split('T')[0] : ""}
           />
           {errors.birthday?.message && (
             <p className="text-xs text-red-400">

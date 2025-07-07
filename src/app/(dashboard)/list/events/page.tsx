@@ -9,7 +9,6 @@ import { Class, Event, Prisma } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
-import { ADToBS } from "bikram-sambat-js"; // ✅ BS date converter
 
 type EventList = Event & { class: Class | null };
 
@@ -40,12 +39,12 @@ const EventListPage = async (
       accessor: "class",
     },
     {
-      header: "Start Time (BS)",
+      header: "Start Time",
       accessor: "startTime",
       className: "hidden md:table-cell",
     },
     {
-      header: "End Time (BS)",
+      header: "End Time",
       accessor: "endTime",
       className: "hidden md:table-cell",
     },
@@ -62,17 +61,10 @@ const EventListPage = async (
   const renderRow = (item: EventList) => {
     const startDate = new Date(item.startTime);
     const endDate = new Date(item.endTime);
-    const bsStart = ADToBS(startDate.toISOString().split("T")[0]);
-    const bsEnd = ADToBS(endDate.toISOString().split("T")[0]);
-    const [startYear, startMonth, startDay] = bsStart.split('-').map(Number);
-    const [endYear, endMonth, endDay] = bsEnd.split('-').map(Number);
-    const startTime = startDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-    const endTime = endDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-
-    const nepaliMonths = [
-      'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-      'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-    ];
+    const adStart = startDate.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    const adEnd = endDate.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    const startTime = startDate.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    const endTime = endDate.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 
     return (
       <tr
@@ -82,8 +74,8 @@ const EventListPage = async (
         <td className="p-4">{item.title}</td>
         <td className="hidden md:table-cell">{item.description}</td>
         <td>{item.class?.name || "-"}</td>
-        <td className="hidden md:table-cell">{`${nepaliMonths[startMonth - 1]} ${startDay }, ${startYear} ${startTime}`}</td>
-        <td className="hidden md:table-cell">{`${nepaliMonths[endMonth - 1]} ${endDay }, ${endYear} ${endTime}`}</td>
+        <td className="hidden md:table-cell">{`${adStart} ${startTime}`}</td>
+        <td className="hidden md:table-cell">{`${adEnd} ${endTime}`}</td>
         {(role === "admin" || role === "teacher") && (
           <td>
             <div className="flex items-center gap-2">

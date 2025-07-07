@@ -8,7 +8,6 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Finance, Prisma, ExpenseType } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
-import { ADToBS } from "bikram-sambat-js";
 
 const sortOptions = [
   { label: "Date (Newest)", value: "createdAt", direction: "desc" as const },
@@ -31,22 +30,19 @@ const FinanceListPage = async (
   const sessionClaims = session.sessionClaims;
   const role = (sessionClaims?.metadata as { role?: string })?.role;
 
-  const nepaliMonths = [
-    'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-    'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-  ];
-
-  const formatBSDate = (date: Date) => {
-    const bsDate = ADToBS(date.toISOString().split('T')[0]);
-    const [year, month, day] = bsDate.split('-').map(Number);
-    return `${nepaliMonths[month - 1]} ${day-1}, ${year}`;
+  const formatADDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
   const columns = [
     { header: "Type", accessor: "type" },
     { header: "Amount", accessor: "amount" },
     { header: "Description", accessor: "description" },
-    { header: "Date (BS)", accessor: "date" },
+    { header: "Date (AD)", accessor: "date" },
     ...(role === "admin" || role === "accountant"
       ? [{ header: "Actions", accessor: "actions" }]
       : []),
@@ -71,7 +67,7 @@ const FinanceListPage = async (
       </td>
       <td>{Number(finance.amount).toLocaleString()}</td>
       <td>{finance.description || "-"}</td>
-      <td>{formatBSDate(new Date(finance.createdAt))}</td>
+      <td>{formatADDate(new Date(finance.createdAt))}</td>
       {(role === "admin" || role === "accountant") && (
         <td>
           <div className="flex items-center gap-2">

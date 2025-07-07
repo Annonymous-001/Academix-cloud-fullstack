@@ -1,6 +1,5 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
-import { ADToBS } from "bikram-sambat-js";
 
 const Announcements = async () => {
   const session = await auth();
@@ -37,7 +36,7 @@ const Announcements = async () => {
             <div className="flex items-center justify-between">
               <h2 className="font-medium">{data[0].title}</h2>
               <span className="text-xs text-gray-400 bg-white rounded-md px-1 py-1">
-                {ADToBS(new Date(data[0].date).toISOString().split('T')[0])}
+                {new Date(data[0].date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
               </span>
             </div>
             <p className="text-sm text-gray-400 mt-1">{data[0].description}</p>
@@ -48,7 +47,7 @@ const Announcements = async () => {
             <div className="flex items-center justify-between">
               <h2 className="font-medium">{data[1].title}</h2>
               <span className="text-xs text-gray-400 bg-white rounded-md px-1 py-1">
-                {ADToBS(new Date(data[1].date).toISOString().split('T')[0])}
+                {new Date(data[1].date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
               </span>
             </div>
             <p className="text-sm text-gray-400 mt-1">{data[1].description}</p>
@@ -59,7 +58,7 @@ const Announcements = async () => {
             <div className="flex items-center justify-between">
               <h2 className="font-medium">{data[2].title}</h2>
               <span className="text-xs text-gray-400 bg-white rounded-md px-1 py-1">
-                {ADToBS(new Date(data[2].date).toISOString().split('T')[0])}
+                {new Date(data[2].date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
               </span>
             </div>
             <p className="text-sm text-gray-400 mt-1">{data[2].description}</p>

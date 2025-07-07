@@ -2,38 +2,25 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import BikramSambatDatePicker from "./BikramSambatDatePicker";
-import BSMonthViewCalendar from "./BSMonthViewCalendar";
-import { BSToAD } from "bikram-sambat-js";
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
 
-interface BSDate {
-  year: number;
-  month: number;
-  day: number;
-}
+type ValuePiece = Date | null;
 
-const EventCalendar = ({
-  initialDate,
-}: {
-  initialDate?: string;
-}) => {
-  const [selectedDate, setSelectedDate] = useState<BSDate | null>(null);
+type Value = ValuePiece | [ValuePiece, ValuePiece];
+
+const EventCalendar = () => {
+  const [value, onChange] = useState<Value>(new Date());
+
   const router = useRouter();
 
   useEffect(() => {
-    if (selectedDate) {
-      const year = selectedDate.year;
-      const month = selectedDate.month;
-      const day = selectedDate.day;
-      
-      const bsDateString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-      const adDateString = BSToAD(bsDateString);
-      
-      router.push(`?date=${adDateString}`);
+    if (value instanceof Date) {
+      router.push(`?date=${value}`);
     }
-  }, [selectedDate, router]);
+  }, [value, router]);
 
-  return <BSMonthViewCalendar onDateSelect={setSelectedDate} initialDate={initialDate} />;
+  return <Calendar onChange={onChange} value={value} />;
 };
 
 export default EventCalendar;

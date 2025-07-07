@@ -15,8 +15,6 @@ import { useFormState } from "react-dom";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
-import BikramSambatDatePicker from "../BikramSambatDatePicker";
-import { BSToAD } from "bikram-sambat-js";
 import ErrorDisplay from "../ui/error-display";
 
 const ExamForm = ({
@@ -79,34 +77,18 @@ const ExamForm = ({
 
   const { subjects, classes } = relatedData;
 
-  const handleStartDateSelect = (date: {
-    year: number;
-    month: number;
-    day: number;
-  }) => {
-    const bsDateString = `${date.year}-${date.month
-      .toString()
-      .padStart(2, "0")}-${date.day.toString().padStart(2, "0")}`;
-    const adDateString = BSToAD(bsDateString);
-    const newDate = new Date(adDateString);
+  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = new Date(e.target.value);
     // Set default time to 9:00 AM
-    newDate.setHours(9, 0, 0, 0);
-    setValue("startTime", newDate);
+    date.setHours(9, 0, 0, 0);
+    setValue("startTime", date);
   };
 
-  const handleEndDateSelect = (date: {
-    year: number;
-    month: number;
-    day: number;
-  }) => {
-    const bsDateString = `${date.year}-${date.month
-      .toString()
-      .padStart(2, "0")}-${date.day.toString().padStart(2, "0")}`;
-    const adDateString = BSToAD(bsDateString);
-    const newDate = new Date(adDateString);
+  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = new Date(e.target.value);
     // Set default time to 5:00 PM
-    newDate.setHours(17, 0, 0, 0);
-    setValue("endTime", newDate);
+    date.setHours(17, 0, 0, 0);
+    setValue("endTime", date);
   };
 
   const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,6 +103,12 @@ const ExamForm = ({
     const currentDate = new Date(watch("endTime") || new Date());
     currentDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     setValue("endTime", currentDate);
+  };
+
+  // Format date for input value
+  const formatDateForInput = (date: Date | undefined) => {
+    if (!date) return "";
+    return date.toISOString().slice(0, 10);
   };
 
   // Format time for input value
@@ -154,7 +142,12 @@ const ExamForm = ({
         />
         <div className="flex flex-col gap-2 w-full md:w-1/4">
           <label className="text-xs text-gray-500">Start Date</label>
-          <BikramSambatDatePicker onDateSelect={handleStartDateSelect} />
+          <input
+            type="date"
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+            onChange={handleStartDateChange}
+            value={formatDateForInput(watch("startTime"))}
+          />
           <div className="mt-2">
             <label className="text-xs text-gray-500">Start Time</label>
             <input
@@ -172,7 +165,12 @@ const ExamForm = ({
         </div>
         <div className="flex flex-col gap-2 w-full md:w-1/4">
           <label className="text-xs text-gray-500">End Date</label>
-          <BikramSambatDatePicker onDateSelect={handleEndDateSelect} />
+          <input
+            type="date"
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+            onChange={handleEndDateChange}
+            value={formatDateForInput(watch("endTime"))}
+          />
           <div className="mt-2">
             <label className="text-xs text-gray-500">End Time</label>
             <input

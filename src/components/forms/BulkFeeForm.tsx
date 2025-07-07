@@ -7,7 +7,6 @@ import { createBulkFees } from "@/lib/actions";
 import { useTransition, useState } from "react";
 import { toast } from "react-toastify";
 import InputField from "@/components/InputField";
-import BikramSambatDatePicker from "@/components/BikramSambatDatePicker";
 import { BSToAD } from "bikram-sambat-js";
 
 interface BulkFeeFormProps {
@@ -18,7 +17,6 @@ interface BulkFeeFormProps {
 
 const BulkFeeForm = ({ classId, className, onSuccess }: BulkFeeFormProps) => {
   const [loading, startTransition] = useTransition();
-  const [selectedBSDate, setSelectedBSDate] = useState<{ year: number; month: number; day: number } | null>(null);
 
   const {
     register,
@@ -34,16 +32,6 @@ const BulkFeeForm = ({ classId, className, onSuccess }: BulkFeeFormProps) => {
     },
   });
 
-  const handleDateSelect = (date: { year: number; month: number; day: number }) => {
-    setSelectedBSDate(date);
-    // Convert BS date to AD date for the form
-    const bsDateString = `${date.year}-${date.month.toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}`;
-    const adDateString = BSToAD(bsDateString);
-    // Ensure the string is in YYYY-MM-DD and create a Date object
-    const adDate = new Date(adDateString + "T00:00:00");
-    setValue('dueDate', adDate, { shouldValidate: true });
-  };
-
   const onSubmit = (data: BulkFeeSchema) => {
     startTransition(async () => {
       const result = await createBulkFees({ success: false, error: false }, data);
@@ -51,7 +39,6 @@ const BulkFeeForm = ({ classId, className, onSuccess }: BulkFeeFormProps) => {
       if (result.success) {
         toast.success(result.message || "Bulk fees created successfully!");
         reset();
-        setSelectedBSDate(null);
         onSuccess?.();
       } else {
         toast.error(result.message || "Failed to create bulk fees");
@@ -88,17 +75,12 @@ const BulkFeeForm = ({ classId, className, onSuccess }: BulkFeeFormProps) => {
         />
 
         <div className="flex flex-col gap-2">
-          <label className="text-xs text-gray-500">Due Date (BS)</label>
-          <BikramSambatDatePicker onDateSelect={handleDateSelect} />
+          <label className="text-xs text-gray-500">Due Date (AD)</label>
           <input
-            type="hidden"
+            type="date"
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
             {...register("dueDate")}
           />
-          {selectedBSDate && (
-            <p className="text-xs text-green-600">
-              Selected: {selectedBSDate.year}/{selectedBSDate.month.toString().padStart(2, '0')}/{selectedBSDate.day.toString().padStart(2, '0')}
-            </p>
-          )}
           {errors.dueDate?.message && (
             <p className="text-xs text-red-400">
               {errors.dueDate.message.toString()}

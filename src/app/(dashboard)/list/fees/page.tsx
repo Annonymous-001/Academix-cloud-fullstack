@@ -10,7 +10,6 @@ import { auth } from "@clerk/nextjs/server";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
-import { ADToBS } from "bikram-sambat-js";
 
 type FeeWithRelations = Fee & {
   student: Student & { 
@@ -93,17 +92,7 @@ const FeesListPage = async (
   ];
 
   const renderRow = (fee: FeeWithRelations) => {
-    const dueDate = new Date(fee.dueDate);
-    const adDateString = `${dueDate.getFullYear()}-${String(
-      dueDate.getMonth() + 1
-    ).padStart(2, "0")}-${String(dueDate.getDate()).padStart(2, "0")}`;
-    const bsDate = ADToBS(adDateString);
-    const [year, month, day] = bsDate.split("-").map(Number);
-    
-    const nepaliMonths = [
-      'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-      'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-    ];
+    const adDate = new Date(fee.dueDate).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 
     // Get current class from enrollments (where leftAt is null - still in class)
     const currentEnrollment = fee.student.enrollments[0]; // Since we're taking only 1 enrollment
@@ -121,7 +110,7 @@ const FeesListPage = async (
         <td>{Number(fee.totalAmount).toLocaleString()}</td>
         <td>{Number(fee.totalAmount - fee.paidAmount).toLocaleString()}</td>
         <td>
-          {`${nepaliMonths[month - 1]} ${day}, ${year}`}
+          {adDate}
         </td>
         <td>
           <span className={`px-2 py-1 rounded-full text-xs ${

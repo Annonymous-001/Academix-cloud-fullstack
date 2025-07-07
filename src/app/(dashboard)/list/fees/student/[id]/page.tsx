@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Download, Receipt } from "lucide-react";
 import Link from "next/link";
 import FormContainer from "@/components/FormContainer";
-import { ADToBS } from "bikram-sambat-js";
 
 const StudentFeesPage = async (
   props: {
@@ -70,15 +69,8 @@ const StudentFeesPage = async (
     return Number(fee.totalAmount) - totalPaid;
   };
 
-  const nepaliMonths = [
-    'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-    'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-  ];
-
-  const formatBSDate = (date: Date) => {
-    const bsDate = ADToBS(date.toISOString().split('T')[0]);
-    const [year, month, day] = bsDate.split('-').map(Number);
-    return `${nepaliMonths[month - 1]} ${day}, ${year}`;
+  const formatADDate = (date: Date) => {
+    return new Date(date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   };
 
   return (
@@ -139,7 +131,7 @@ const StudentFeesPage = async (
                   <td className="py-2 px-4">{fee.description || "No description"}</td>
                   <td className="py-2 px-4">{Number(fee.totalAmount).toLocaleString()}</td>
                   <td className="py-2 px-4">{calculateTotalPaid(fee.payments).toLocaleString()}</td>
-                  <td className="py-2 px-4">{formatBSDate(new Date(fee.dueDate))}</td>
+                  <td className="py-2 px-4">{formatADDate(new Date(fee.dueDate))}</td>
                   <td className="py-2 px-4">
                     <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(fee.status)}`}>
                       {fee.status}

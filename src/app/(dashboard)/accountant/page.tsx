@@ -4,7 +4,6 @@ import ExpenseDistributionChart from '@/components/ExpenseDistributionChart';
 import RecentTransactions from '@/components/RecentTransactions';
 import prisma from '@/lib/prisma';
 import { IndianRupee, PieChart, TrendingUp, TrendingDown } from 'lucide-react';
-import { ADToBS } from 'bikram-sambat-js';
 
 const AccountantDashboard = async () => {
   // Fetch aggregate financial data
@@ -56,9 +55,13 @@ const AccountantDashboard = async () => {
     orderBy: { createdAt: 'asc' },
   });
 
-  const bsMonths = ["Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra", "Ashwin", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"];
-  
-  const monthlyChartData = bsMonths.map(monthName => ({
+  // Prepare AD months for chart
+  const adMonths = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+  // Initialize chart data for each month
+  const monthlyChartData = adMonths.map((monthName, idx) => ({
     name: monthName,
     income: 0,
     expenses: 0,
@@ -66,19 +69,17 @@ const AccountantDashboard = async () => {
 
   monthlyIncome.forEach(item => {
     const adDate = new Date(item.date);
-    const bsDate = ADToBS(adDate.toISOString().split('T')[0]);
-    const bsMonth = parseInt(bsDate.split('-')[1]) - 1;
-    if (monthlyChartData[bsMonth]) {
-      monthlyChartData[bsMonth].income += Number(item._sum.amount);
+    const adMonth = adDate.getMonth(); // 0-based
+    if (monthlyChartData[adMonth]) {
+      monthlyChartData[adMonth].income += Number(item._sum.amount);
     }
   });
 
   monthlyExpenses.forEach(item => {
     const adDate = new Date(item.createdAt);
-    const bsDate = ADToBS(adDate.toISOString().split('T')[0]);
-    const bsMonth = parseInt(bsDate.split('-')[1]) - 1;
-    if (monthlyChartData[bsMonth]) {
-      monthlyChartData[bsMonth].expenses += Number(item._sum.amount);
+    const adMonth = adDate.getMonth(); // 0-based
+    if (monthlyChartData[adMonth]) {
+      monthlyChartData[adMonth].expenses += Number(item._sum.amount);
     }
   });
 

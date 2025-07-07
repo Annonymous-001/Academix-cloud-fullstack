@@ -8,7 +8,6 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Announcement, Class } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
-import { ADToBS } from "bikram-sambat-js";
 
 type AnnouncementList = Announcement & { class: Class | null };
 
@@ -65,8 +64,8 @@ const AnnouncementListPage = async (
 
   const renderRow = (item: AnnouncementList) => {
     const date = new Date(item.date);
-    const bsDate = ADToBS(date.toISOString().split("T")[0]);
-    const time = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    const adDate = date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    const time = date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 
     return (
       <tr
@@ -76,7 +75,7 @@ const AnnouncementListPage = async (
         <td className="p-4">{item.title}</td>
         <td className="hidden md:table-cell">{item.description}</td>
         <td>{item.class?.name || "-"}</td>
-        <td className="hidden md:table-cell">{`${bsDate} ${time}`}</td>
+        <td className="hidden md:table-cell">{`${adDate} ${time}`}</td>
         {role === "admin" && (
           <td>
             <div className="flex items-center gap-2">

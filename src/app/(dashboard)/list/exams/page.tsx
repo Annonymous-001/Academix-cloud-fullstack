@@ -8,7 +8,6 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Class, Exam, Prisma, Subject } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
-import { ADToBS } from "bikram-sambat-js";
 
 type ExamList = Exam & {
   subject: Subject;
@@ -63,14 +62,7 @@ const ExamListPage = async (
   ];
 
   const renderRow = (item: ExamList) => {
-    const startDate = new Date(item.startTime);
-    const bsDate = ADToBS(startDate.toISOString().split('T')[0]);
-    const [year, month, day] = bsDate.split('-').map(Number);
-    
-    const nepaliMonths = [
-      'बैशाख', 'जेठ', 'आषाढ', 'श्रावण', 'भाद्र', 'आश्विन',
-      'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'
-    ];
+    const adDate = new Date(item.startTime).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 
     return (
       <tr
@@ -80,7 +72,7 @@ const ExamListPage = async (
         <td className="flex items-center gap-4 p-4">{item.subject.name}</td>
         <td>{item.class.name}</td>
         <td className="hidden md:table-cell">
-          {`${nepaliMonths[month - 1]} ${day }, ${year}`}
+          {adDate}
         </td>
         <td>
           <div className="flex items-center gap-2">

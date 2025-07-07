@@ -9,8 +9,6 @@ import { useFormState } from "react-dom";
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
-import BikramSambatDatePicker from "../BikramSambatDatePicker";
-import { BSToAD } from "bikram-sambat-js";
 import ErrorDisplay from "../ui/error-display";
 
 const FeeForm = ({
@@ -28,6 +26,7 @@ const FeeForm = ({
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<FeeSchema>({
     resolver: zodResolver(feeSchema),
@@ -117,17 +116,15 @@ const FeeForm = ({
     setTimeout(() => setIsDropdownOpen(false), 100);
   };
 
-  const handleDueDateSelect = (date: {
-    year: number;
-    month: number;
-    day: number;
-  }) => {
-    const bsDateString = `${date.year}-${date.month
-      .toString()
-      .padStart(2, "0")}-${date.day.toString().padStart(2, "0")}`;
-    const adDateString = BSToAD(bsDateString);
-    const adDate = new Date(adDateString);
-    setValue("dueDate", adDate);
+  const handleDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = new Date(e.target.value);
+    setValue("dueDate", date);
+  };
+
+  // Format date for input value
+  const formatDateForInput = (date: Date | undefined) => {
+    if (!date) return "";
+    return date.toISOString().slice(0, 10);
   };
 
   useEffect(() => {
@@ -238,7 +235,12 @@ const FeeForm = ({
           <div className="w-full md:w-[48%]">
             <div className="flex flex-col gap-2">
               <label className="text-xs text-gray-500">Due Date</label>
-              <BikramSambatDatePicker onDateSelect={handleDueDateSelect} />
+              <input
+                type="date"
+                className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+                onChange={handleDueDateChange}
+                value={formatDateForInput(watch("dueDate"))}
+              />
               {errors.dueDate?.message && (
                 <p className="text-xs text-red-400">
                   {errors.dueDate.message.toString()}
