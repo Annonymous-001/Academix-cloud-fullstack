@@ -12,6 +12,8 @@
   "dependencies": {
     "@clerk/elements": "^0.23.25",
     "@clerk/nextjs": "^6.19.2",
+    "@faker-js/faker": "^8.4.1",
+    "@google/genai": "^1.9.0",
     "@hookform/resolvers": "^3.9.0",
     "@prisma/client": "^6.10.1",
     "@radix-ui/react-dialog": "^1.1.6",
@@ -56,8 +58,8 @@
     "recharts": "^2.12.7",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.23.8",
-    "@faker-js/faker": "^8.4.1"
+    "web-push": "^3.6.7",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.17.28",

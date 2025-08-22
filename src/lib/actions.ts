@@ -25,6 +25,8 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { calculateFeeStatus } from "./feeHelpers";
 import { revalidatePath } from "next/cache";
 import { cleanupImageOnFailure } from "./cloudinary";
+import { NotificationType, NotificationPriority } from "@prisma/client";
+import { auth } from "@clerk/nextjs/server";
 
 type CurrentState = { 
   success: boolean; 
@@ -268,6 +270,21 @@ export const createTeacher = async (
           },
         },
       });
+
+      // Create notification for new teacher
+      try {
+        await createNotification({
+          title: "New Teacher Added",
+          message: `${data.name} ${data.surname} has been added as a new teacher`,
+          type: NotificationType.GENERAL,
+          priority: NotificationPriority.NORMAL,
+          targetRole: "admin",
+          teacherId: user.id,
+        });
+      } catch (notifError) {
+        console.error("Error creating notification for new teacher:", notifError);
+        // Don't fail the teacher creation if notification fails
+      }
 
       return { success: true, error: false };
     } catch (prismaError: any) {
@@ -518,6 +535,33 @@ export const createStudent = async (
         },
       });
 
+      // Create notification for new student
+      try {
+        await createNotification({
+          title: "New Student Enrolled",
+          message: `${studentData.name} ${studentData.surname} has been enrolled as a new student`,
+          type: NotificationType.GENERAL,
+          priority: NotificationPriority.NORMAL,
+          targetRole: "admin",
+          studentId: user.id,
+        });
+
+        // Notify parent if exists
+        if (parent?.id) {
+          await createNotification({
+            title: "Student Enrollment Confirmation",
+            message: `${studentData.name} ${studentData.surname} has been successfully enrolled`,
+            type: NotificationType.GENERAL,
+            priority: NotificationPriority.NORMAL,
+            parentId: parent.id,
+            studentId: user.id,
+          });
+        }
+      } catch (notifError) {
+        console.error("Error creating notification for new student:", notifError);
+        // Don't fail the student creation if notification fails
+      }
+
       return { success: true, error: false };
     } catch (prismaError: any) {
       console.error("Prisma error:", prismaError);
@@ -663,7 +707,7 @@ export const createExam = async (
   data: ExamSchema
 ): Promise<CurrentState> => {
   try {
-    await prisma.exam.create({
+    const exam = await prisma.exam.create({
       data: {
         title: data.title,
         startTime: data.startTime,
@@ -671,7 +715,32 @@ export const createExam = async (
         subjectId: data.subjectId,
         classId: data.classId,
       },
+      include: {
+        subject: { select: { name: true } },
+        class: { select: { name: true } }
+      }
     });
+
+    // Create notification for exam
+    try {
+      // Get class supervisor
+      const classData = await prisma.class.findUnique({
+        where: { id: data.classId },
+        select: { supervisorId: true }
+      });
+
+      await createNotification({
+        title: `New Exam: ${data.title}`,
+        message: `A new exam "${data.title}" has been scheduled for ${exam.class.name} - ${exam.subject.name}`,
+        type: NotificationType.EXAM,
+        priority: NotificationPriority.HIGH,
+        targetClassId: data.classId,
+        targetSupervisorId: classData?.supervisorId || undefined,
+      });
+    } catch (notifError) {
+      console.error("Error creating notification for exam:", notifError);
+      // Don't fail the exam creation if notification fails
+    }
 
     return { success: true, error: false };
   } catch (err: any) {
@@ -839,14 +908,44 @@ export const createAssignment = async (
   data: AssignmentSchema
 ): Promise<CurrentState> => {
   try {
-    await prisma.assignment.create({
+    const assignment = await prisma.assignment.create({
       data: {
         title: data.title,
         startDate: data.startDate,
         dueDate: data.dueDate,
         lessonId: data.lessonId,
       },
+      include: {
+        lesson: {
+          select: {
+            name: true,
+            class: { select: { id: true, name: true } },
+            subject: { select: { name: true } }
+          }
+        }
+      }
     });
+
+    // Create notification for assignment
+    try {
+      // Get class supervisor
+      const classData = await prisma.class.findUnique({
+        where: { id: assignment.lesson.class.id },
+        select: { supervisorId: true }
+      });
+
+      await createNotification({
+        title: `New Assignment: ${data.title}`,
+        message: `A new assignment "${data.title}" has been assigned for ${assignment.lesson.class.name} - ${assignment.lesson.subject.name}`,
+        type: NotificationType.ASSIGNMENT,
+        priority: NotificationPriority.HIGH,
+        targetClassId: assignment.lesson.class.id,
+        targetSupervisorId: classData?.supervisorId || undefined,
+      });
+    } catch (notifError) {
+      console.error("Error creating notification for assignment:", notifError);
+      // Don't fail the assignment creation if notification fails
+    }
 
     return { success: true, error: false };
   } catch (err: any) {
@@ -920,14 +1019,68 @@ export const createResult = async (
   data: ResultSchema
 ): Promise<CurrentState> => {
   try {
-    await prisma.result.create({
+    const result = await prisma.result.create({
       data: {
         studentId: data.studentId,
         score: data.score,
         examId: data.examId || null,
         assignmentId: data.assignmentId || null,
       },
+      include: {
+        student: {
+          select: {
+            name: true,
+            surname: true,
+            parentId: true
+          }
+        },
+        exam: {
+          select: {
+            title: true,
+            subject: { select: { name: true } }
+          }
+        },
+        assignment: {
+          select: {
+            title: true,
+            lesson: {
+              select: {
+                subject: { select: { name: true } }
+              }
+            }
+          }
+        }
+      }
     });
+
+    // Create notification for result
+    try {
+      const resultType = result.exam ? "exam" : "assignment";
+      const resultTitle = result.exam ? result.exam.title : result.assignment?.title;
+      const subjectName = result.exam ? result.exam.subject.name : result.assignment?.lesson.subject.name;
+
+      await createNotification({
+        title: `New ${resultType.charAt(0).toUpperCase() + resultType.slice(1)} Result`,
+        message: `${result.student.name} ${result.student.surname} scored ${data.score} in ${resultTitle} (${subjectName})`,
+        type: NotificationType.RESULT,
+        priority: NotificationPriority.HIGH,
+        studentId: data.studentId,
+      });
+
+      // Notify parent if exists
+      if (result.student.parentId) {
+        await createNotification({
+          title: `New ${resultType.charAt(0).toUpperCase() + resultType.slice(1)} Result`,
+          message: `${result.student.name} ${result.student.surname} scored ${data.score} in ${resultTitle} (${subjectName})`,
+          type: NotificationType.RESULT,
+          priority: NotificationPriority.HIGH,
+          parentId: result.student.parentId,
+        });
+      }
+    } catch (notifError) {
+      console.error("Error creating notification for result:", notifError);
+      // Don't fail the result creation if notification fails
+    }
 
     return { success: true, error: false };
   } catch (err: any) {
@@ -1001,7 +1154,7 @@ export const createEvent = async (
   data: EventSchema
 ): Promise<CurrentState> => {
   try {
-    await prisma.event.create({
+    const event = await prisma.event.create({
       data: {
         title: data.title,
         description: data.description,
@@ -1009,7 +1162,70 @@ export const createEvent = async (
         endTime: data.endTime,
         classId: data.classId || null,
       },
+      include: {
+        class: { select: { name: true } }
+      }
     });
+
+    // Create notification for event
+    try {
+      if (data.classId) {
+        // Class-specific event - get class supervisor
+        const classData = await prisma.class.findUnique({
+          where: { id: data.classId },
+          select: { supervisorId: true }
+        });
+
+        await createNotification({
+          title: `New Class Event: ${data.title}`,
+          message: data.description.length > 100 
+            ? data.description.substring(0, 100) + "..." 
+            : data.description,
+          type: NotificationType.EVENT,
+          priority: NotificationPriority.NORMAL,
+          targetClassId: data.classId,
+          targetSupervisorId: classData?.supervisorId || undefined,
+          relatedEventId: event.id,
+        });
+      } else {
+        // General event - notify all students, teachers, and parents
+        await createNotification({
+          title: `New Event: ${data.title}`,
+          message: data.description.length > 100 
+            ? data.description.substring(0, 100) + "..." 
+            : data.description,
+          type: NotificationType.EVENT,
+          priority: NotificationPriority.NORMAL,
+          targetRole: "student",
+          relatedEventId: event.id,
+        });
+
+        await createNotification({
+          title: `New Event: ${data.title}`,
+          message: data.description.length > 100 
+            ? data.description.substring(0, 100) + "..." 
+            : data.description,
+          type: NotificationType.EVENT,
+          priority: NotificationPriority.NORMAL,
+          targetRole: "teacher",
+          relatedEventId: event.id,
+        });
+
+        await createNotification({
+          title: `New Event: ${data.title}`,
+          message: data.description.length > 100 
+            ? data.description.substring(0, 100) + "..." 
+            : data.description,
+          type: NotificationType.EVENT,
+          priority: NotificationPriority.NORMAL,
+          targetRole: "parent",
+          relatedEventId: event.id,
+        });
+      }
+    } catch (notifError) {
+      console.error("Error creating notification for event:", notifError);
+      // Don't fail the event creation if notification fails
+    }
 
     return { success: true, error: false };
   } catch (err: any) {
@@ -1085,7 +1301,7 @@ export const createAnnouncement = async (
   data: AnnouncementSchema
 ): Promise<CurrentState> => {
   try {
-    await prisma.announcement.create({
+    const announcement = await prisma.announcement.create({
       data: {
         title: data.title,
         description: data.description,
@@ -1093,6 +1309,66 @@ export const createAnnouncement = async (
         classId: data.classId || null,
       },
     });
+
+    // Create notification for the announcement
+    try {
+      if (data.classId) {
+        // Class-specific announcement - get class supervisor
+        const classData = await prisma.class.findUnique({
+          where: { id: data.classId },
+          select: { supervisorId: true }
+        });
+
+        await createNotification({
+          title: `New Class Announcement: ${data.title}`,
+          message: data.description.length > 100 
+            ? data.description.substring(0, 100) + "..." 
+            : data.description,
+          type: NotificationType.ANNOUNCEMENT,
+          priority: NotificationPriority.NORMAL,
+          targetClassId: data.classId,
+          targetSupervisorId: classData?.supervisorId || undefined,
+          relatedAnnouncementId: announcement.id,
+        });
+      } else {
+        // General announcement - notify all students, teachers, and parents
+        await createNotification({
+          title: `New Announcement: ${data.title}`,
+          message: data.description.length > 100 
+            ? data.description.substring(0, 100) + "..." 
+            : data.description,
+          type: NotificationType.ANNOUNCEMENT,
+          priority: NotificationPriority.NORMAL,
+          targetRole: "student",
+          relatedAnnouncementId: announcement.id,
+        });
+
+        await createNotification({
+          title: `New Announcement: ${data.title}`,
+          message: data.description.length > 100 
+            ? data.description.substring(0, 100) + "..." 
+            : data.description,
+          type: NotificationType.ANNOUNCEMENT,
+          priority: NotificationPriority.NORMAL,
+          targetRole: "teacher",
+          relatedAnnouncementId: announcement.id,
+        });
+
+        await createNotification({
+          title: `New Announcement: ${data.title}`,
+          message: data.description.length > 100 
+            ? data.description.substring(0, 100) + "..." 
+            : data.description,
+          type: NotificationType.ANNOUNCEMENT,
+          priority: NotificationPriority.NORMAL,
+          targetRole: "parent",
+          relatedAnnouncementId: announcement.id,
+        });
+      }
+    } catch (notifError) {
+      console.error("Error creating notification for announcement:", notifError);
+      // Don't fail the announcement creation if notification fails
+    }
 
     return { success: true, error: false };
   } catch (err: any) {
@@ -1243,6 +1519,21 @@ export const createParent = async (
             console.log(`Student with StudentId ${studentId} not found`);
           }
         }
+      }
+
+      // Create notification for new parent
+      try {
+        await createNotification({
+          title: "New Parent Registered",
+          message: `${data.name} ${data.surname} has been registered as a new parent`,
+          type: NotificationType.GENERAL,
+          priority: NotificationPriority.NORMAL,
+          targetRole: "admin",
+          parentId: user.id,
+        });
+      } catch (notifError) {
+        console.error("Error creating notification for new parent:", notifError);
+        // Don't fail the parent creation if notification fails
       }
 
       console.log("Parent created successfully in database");
@@ -1657,7 +1948,7 @@ export const createFee = async (
     // For zero amount fees, automatically set status to PAID
     const status = totalAmount === 0 ? "PAID" : data.status;
 
-    await prisma.fee.create({
+    const fee = await prisma.fee.create({
       data: {
         studentId: data.studentId,
         totalAmount: BigInt(data.totalAmount?.toString() ?? "0"),
@@ -1667,7 +1958,54 @@ export const createFee = async (
         dueDate: data.dueDate,
         status: status, // Use the status we determined above
       },
+      include: {
+        student: {
+          select: {
+            name: true,
+            surname: true,
+            parentId: true
+          }
+        }
+      }
     });
+
+          // Create notification for fee
+      try {
+        await createNotification({
+          title: "New Fee Generated",
+          message: `A new fee of ₹${Number(data.totalAmount).toLocaleString()} has been generated for ${fee.student.name} ${fee.student.surname}`,
+          type: NotificationType.FEE_DUE,
+          priority: NotificationPriority.HIGH,
+          studentId: data.studentId,
+          relatedFeeId: fee.id,
+        });
+
+        // Notify parent if exists
+        if (fee.student.parentId) {
+          await createNotification({
+            title: "Fee Generated",
+            message: `A new fee of ₹${Number(data.totalAmount).toLocaleString()} has been generated for ${fee.student.name} ${fee.student.surname}`,
+            type: NotificationType.FEE_DUE,
+            priority: NotificationPriority.HIGH,
+            parentId: fee.student.parentId,
+            relatedFeeId: fee.id,
+          });
+        }
+
+        // Notify accountant
+        await createNotification({
+          title: "New Fee Generated",
+          message: `A new fee of ₹${Number(data.totalAmount).toLocaleString()} has been generated for ${fee.student.name} ${fee.student.surname}`,
+          type: NotificationType.FEE_DUE,
+          priority: NotificationPriority.NORMAL,
+          targetRole: "accountant",
+          relatedFeeId: fee.id,
+        });
+    } catch (notifError) {
+      console.error("Error creating notification for fee:", notifError);
+      // Don't fail the fee creation if notification fails
+    }
+
     return { success: true, error: false };
   } catch (err: any) {
     console.error("Error creating fee:", err);
@@ -1826,12 +2164,42 @@ export const createPayment = async (
         });
 
         // 3. Now calculate and set the status with the updated amounts
-        await tx.fee.update({
+        const finalFee = await tx.fee.update({
           where: { id: data.feeId },
           data: {
             status: await calculateFeeStatus(data.feeId, tx),
           },
+          include: {
+            student: true,
+          },
         });
+
+        // 4. Create notification for payment
+        try {
+          await createNotification({
+            title: "Payment Received",
+            message: `Payment of ₹${Number(data.amount).toLocaleString()} received for ${finalFee.student.name} ${finalFee.student.surname}`,
+            type: NotificationType.FEE_PAID,
+            priority: NotificationPriority.NORMAL,
+            studentId: finalFee.studentId,
+            relatedFeeId: finalFee.id,
+          });
+
+          // Also notify parents
+          if (finalFee.student.parentId) {
+            await createNotification({
+              title: "Payment Confirmation",
+              message: `Payment of ₹${Number(data.amount).toLocaleString()} has been received for ${finalFee.student.name} ${finalFee.student.surname}`,
+              type: NotificationType.FEE_PAID,
+              priority: NotificationPriority.NORMAL,
+              parentId: finalFee.student.parentId,
+              relatedFeeId: finalFee.id,
+            });
+          }
+        } catch (notifError) {
+          console.error("Error creating notification for payment:", notifError);
+          // Don't fail the payment if notification fails
+        }
 
         return { success: true, error: false };
       },
@@ -1954,7 +2322,7 @@ export const createAttendance = async (
       };  
     }  
 
-    await prisma.attendance.create({  
+    const attendance = await prisma.attendance.create({  
       data: {
         date: data.date,
         studentId: data.studentId,
@@ -1963,8 +2331,44 @@ export const createAttendance = async (
         inTime: new Date(),
         outTime: null,
         status: data.status
+      },
+      include: {
+        student: {
+          select: {
+            name: true,
+            surname: true,
+            parentId: true
+          }
+        }
       }
     });  
+
+    // Create notification for attendance (only for absent/late status)
+    try {
+      if (data.status === "ABSENT" || data.status === "LATE") {
+        await createNotification({
+          title: `Student ${data.status.toLowerCase()}`,
+          message: `${attendance.student.name} ${attendance.student.surname} was marked as ${data.status.toLowerCase()} on ${new Date(data.date).toLocaleDateString()}`,
+          type: NotificationType.ATTENDANCE,
+          priority: NotificationPriority.HIGH,
+          studentId: data.studentId,
+        });
+
+        // Notify parent if exists
+        if (attendance.student.parentId) {
+          await createNotification({
+            title: `Student ${data.status.toLowerCase()}`,
+            message: `${attendance.student.name} ${attendance.student.surname} was marked as ${data.status.toLowerCase()} on ${new Date(data.date).toLocaleDateString()}`,
+            type: NotificationType.ATTENDANCE,
+            priority: NotificationPriority.HIGH,
+            parentId: attendance.student.parentId,
+          });
+        }
+      }
+    } catch (notifError) {
+      console.error("Error creating notification for attendance:", notifError);
+      // Don't fail the attendance creation if notification fails
+    }
 
     return {   
       success: true,   
@@ -2635,5 +3039,511 @@ export const transferSelectedStudents = async (enrollmentIds: string[], destinat
     return { success: true, error: false };
   } catch (err: any) {
     return { success: false, error: true, message: err?.message || "Failed to transfer students" };
+  }
+};
+
+// ==================== NOTIFICATION ACTIONS ====================
+
+// Helper function to get user ID from current session
+async function getCurrentUserId(): Promise<string | null> {
+  const authResult = await auth();
+  return authResult.userId;
+}
+
+// Helper function to get user role from current session
+async function getCurrentUserRole(): Promise<string | null> {
+  const authResult = await auth();
+  const role = authResult.sessionClaims?.metadata as { role?: string };
+  return role?.role || null;
+}
+
+// Create a new notification
+export const createNotification = async (data: {
+  title: string;
+  message: string;
+  type: NotificationType;
+  priority?: NotificationPriority;
+  targetRole?: string;
+  studentId?: string;
+  teacherId?: string;
+  parentId?: string;
+  accountantId?: string;
+  adminId?: string;
+  relatedClassId?: number;
+  relatedEventId?: number;
+  relatedAnnouncementId?: number;
+  relatedFeeId?: number;
+  targetClassId?: number; // For class-specific notifications
+  targetSupervisorId?: string; // For class supervisor notifications
+}): Promise<CurrentState> => {
+  try {
+    // If targetClassId is provided, send notifications to all students in that class
+    if (data.targetClassId) {
+      const classStudents = await prisma.enrollment.findMany({
+        where: { classId: data.targetClassId },
+        include: { student: true }
+      });
+
+      // Create notifications for all students in the class
+      const studentNotifications = classStudents.map(enrollment => ({
+        title: data.title,
+        message: data.message,
+        type: data.type,
+        priority: data.priority || NotificationPriority.NORMAL,
+        targetRole: "student",
+        studentId: enrollment.student.id,
+        relatedClassId: data.targetClassId,
+        relatedEventId: data.relatedEventId,
+        relatedAnnouncementId: data.relatedAnnouncementId,
+        relatedFeeId: data.relatedFeeId,
+      }));
+
+      // Create notifications for parents of students in the class
+      const parentNotifications = classStudents
+        .filter(enrollment => enrollment.student.parentId)
+        .map(enrollment => ({
+          title: data.title,
+          message: data.message,
+          type: data.type,
+          priority: data.priority || NotificationPriority.NORMAL,
+          targetRole: "parent",
+          parentId: enrollment.student.parentId!,
+          relatedClassId: data.targetClassId,
+          relatedEventId: data.relatedEventId,
+          relatedAnnouncementId: data.relatedAnnouncementId,
+          relatedFeeId: data.relatedFeeId,
+        }));
+
+      // Create notifications for class supervisor if specified
+      let supervisorNotifications: any[] = [];
+      if (data.targetSupervisorId) {
+        supervisorNotifications = [{
+          title: data.title,
+          message: data.message,
+          type: data.type,
+          priority: data.priority || NotificationPriority.NORMAL,
+          targetRole: "teacher",
+          teacherId: data.targetSupervisorId,
+          relatedClassId: data.targetClassId,
+          relatedEventId: data.relatedEventId,
+          relatedAnnouncementId: data.relatedAnnouncementId,
+          relatedFeeId: data.relatedFeeId,
+        }];
+      }
+
+      // Create all notifications in a transaction
+      await prisma.$transaction([
+        ...studentNotifications.map(notification => 
+          prisma.notification.create({ data: notification })
+        ),
+        ...parentNotifications.map(notification => 
+          prisma.notification.create({ data: notification })
+        ),
+        ...supervisorNotifications.map(notification => 
+          prisma.notification.create({ data: notification })
+        ),
+      ]);
+
+      return { 
+        success: true, 
+        error: false, 
+        message: `Notification sent to ${studentNotifications.length} students, ${parentNotifications.length} parents, and ${supervisorNotifications.length} supervisors` 
+      };
+    }
+
+    // Single notification creation (existing logic)
+    await prisma.notification.create({
+      data: {
+        title: data.title,
+        message: data.message,
+        type: data.type,
+        priority: data.priority || NotificationPriority.NORMAL,
+        targetRole: data.targetRole,
+        studentId: data.studentId,
+        teacherId: data.teacherId,
+        parentId: data.parentId,
+        accountantId: data.accountantId,
+        adminId: data.adminId,
+        relatedClassId: data.relatedClassId,
+        relatedEventId: data.relatedEventId,
+        relatedAnnouncementId: data.relatedAnnouncementId,
+        relatedFeeId: data.relatedFeeId,
+      },
+    });
+
+    return { success: true, error: false, message: "Notification created successfully" };
+  } catch (err: any) {
+    console.error("Error creating notification:", err);
+    return {
+      success: false,
+      error: true,
+      message: err.message || "Failed to create notification",
+    };
+  }
+};
+
+// Get notifications for current user based on their role and ID
+export const getUserNotifications = async (limit: number = 20, offset: number = 0) => {
+  try {
+    const userId = await getCurrentUserId();
+    const userRole = await getCurrentUserRole();
+
+    if (!userId || !userRole) {
+      return { success: false, error: true, message: "User not authenticated" };
+    }
+
+    // Get user's specific ID from their role table
+    let userSpecificId: string | null = null;
+    
+    switch (userRole) {
+      case "student":
+        const student = await prisma.student.findFirst({ where: { username: userId } });
+        userSpecificId = student?.id || null;
+        break;
+      case "teacher":
+        const teacher = await prisma.teacher.findFirst({ where: { username: userId } });
+        userSpecificId = teacher?.id || null;
+        break;
+      case "parent":
+        const parent = await prisma.parent.findFirst({ where: { username: userId } });
+        userSpecificId = parent?.id || null;
+        break;
+      case "accountant":
+        const accountant = await prisma.accountant.findFirst({ where: { username: userId } });
+        userSpecificId = accountant?.id || null;
+        break;
+      case "admin":
+        const admin = await prisma.admin.findFirst({ where: { username: userId } });
+        userSpecificId = admin?.id || null;
+        break;
+    }
+
+    // Build the where clause for notifications
+    const whereClause: any = {
+      OR: [
+        // Role-based notifications
+        { targetRole: userRole },
+        // User-specific notifications
+        ...(userSpecificId ? [
+          { studentId: userRole === "student" ? userSpecificId : undefined },
+          { teacherId: userRole === "teacher" ? userSpecificId : undefined },
+          { parentId: userRole === "parent" ? userSpecificId : undefined },
+          { accountantId: userRole === "accountant" ? userSpecificId : undefined },
+          { adminId: userRole === "admin" ? userSpecificId : undefined },
+        ].filter(condition => Object.values(condition).some(value => value !== undefined)) : [])
+      ].filter(Boolean)
+    };
+
+    const notifications = await prisma.notification.findMany({
+      where: whereClause,
+      orderBy: [
+        { priority: 'desc' },
+        { createdAt: 'desc' }
+      ],
+      take: limit,
+      skip: offset,
+      include: {
+        relatedClass: { select: { name: true } },
+        relatedEvent: { select: { title: true } },
+        relatedAnnouncement: { select: { title: true } },
+        relatedFee: { 
+          select: { 
+            totalAmount: true, 
+            student: { select: { name: true, surname: true } } 
+          } 
+        },
+      }
+    });
+
+    const totalCount = await prisma.notification.count({
+      where: whereClause
+    });
+
+    const unreadCount = await prisma.notification.count({
+      where: {
+        ...whereClause,
+        isRead: false
+      }
+    });
+
+    return {
+      success: true,
+      error: false,
+      data: {
+        notifications,
+        totalCount,
+        unreadCount,
+        hasMore: offset + notifications.length < totalCount
+      }
+    };
+  } catch (err: any) {
+    console.error("Error fetching notifications:", err);
+    return {
+      success: false,
+      error: true,
+      message: err.message || "Failed to fetch notifications",
+    };
+  }
+};
+
+// Mark notification as read
+export const markNotificationAsRead = async (notificationId: string): Promise<CurrentState> => {
+  try {
+    await prisma.notification.update({
+      where: { id: notificationId },
+      data: {
+        isRead: true,
+        readAt: new Date(),
+      },
+    });
+
+    return { success: true, error: false, message: "Notification marked as read" };
+  } catch (err: any) {
+    console.error("Error marking notification as read:", err);
+    return {
+      success: false,
+      error: true,
+      message: err.message || "Failed to mark notification as read",
+    };
+  }
+};
+
+// Mark all notifications as read for current user
+export const markAllNotificationsAsRead = async (): Promise<CurrentState> => {
+  try {
+    const userId = await getCurrentUserId();
+    const userRole = await getCurrentUserRole();
+
+    if (!userId || !userRole) {
+      return { success: false, error: true, message: "User not authenticated" };
+    }
+
+    // Get user's specific ID from their role table
+    let userSpecificId: string | null = null;
+    
+    switch (userRole) {
+      case "student":
+        const student = await prisma.student.findFirst({ where: { username: userId } });
+        userSpecificId = student?.id || null;
+        break;
+      case "teacher":
+        const teacher = await prisma.teacher.findFirst({ where: { username: userId } });
+        userSpecificId = teacher?.id || null;
+        break;
+      case "parent":
+        const parent = await prisma.parent.findFirst({ where: { username: userId } });
+        userSpecificId = parent?.id || null;
+        break;
+      case "accountant":
+        const accountant = await prisma.accountant.findFirst({ where: { username: userId } });
+        userSpecificId = accountant?.id || null;
+        break;
+      case "admin":
+        const admin = await prisma.admin.findFirst({ where: { username: userId } });
+        userSpecificId = admin?.id || null;
+        break;
+    }
+
+    // Build the where clause for notifications
+    const whereClause: any = {
+      isRead: false,
+      OR: [
+        // Role-based notifications
+        { targetRole: userRole },
+        // User-specific notifications
+        ...(userSpecificId ? [
+          { studentId: userRole === "student" ? userSpecificId : undefined },
+          { teacherId: userRole === "teacher" ? userSpecificId : undefined },
+          { parentId: userRole === "parent" ? userSpecificId : undefined },
+          { accountantId: userRole === "accountant" ? userSpecificId : undefined },
+          { adminId: userRole === "admin" ? userSpecificId : undefined },
+        ].filter(condition => Object.values(condition).some(value => value !== undefined)) : [])
+      ].filter(Boolean)
+    };
+
+    await prisma.notification.updateMany({
+      where: whereClause,
+      data: {
+        isRead: true,
+        readAt: new Date(),
+      },
+    });
+
+    return { success: true, error: false, message: "All notifications marked as read" };
+  } catch (err: any) {
+    console.error("Error marking all notifications as read:", err);
+    return {
+      success: false,
+      error: true,
+      message: err.message || "Failed to mark all notifications as read",
+    };
+  }
+};
+
+// Delete a notification
+export const deleteNotification = async (notificationId: string): Promise<CurrentState> => {
+  try {
+    await prisma.notification.delete({
+      where: { id: notificationId },
+    });
+
+    return { success: true, error: false, message: "Notification deleted successfully" };
+  } catch (err: any) {
+    console.error("Error deleting notification:", err);
+    return {
+      success: false,
+      error: true,
+      message: err.message || "Failed to delete notification",
+    };
+  }
+};
+
+// Create a test notification for the current user (COMMENTED OUT FOR PRODUCTION)
+// export const createTestNotification = async (): Promise<CurrentState> => {
+//   try {
+//     const userId = await getCurrentUserId();
+//     const userRole = await getCurrentUserRole();
+
+//     if (!userId || !userRole) {
+//       return { success: false, error: true, message: "User not authenticated" };
+//     }
+
+//     await createNotification({
+//       title: "Test Notification",
+//       message: "This is a test notification to verify the system is working properly.",
+//       type: NotificationType.GENERAL,
+//       priority: NotificationPriority.NORMAL,
+//       targetRole: userRole,
+//     });
+
+//     return { success: true, error: false, message: "Test notification created successfully" };
+//   } catch (err: any) {
+//     console.error("Error creating test notification:", err);
+//     return {
+//       success: false,
+//       error: true,
+//       message: err.message || "Failed to create test notification",
+//     };
+//   }
+// };
+
+// Get unread notification count for current user
+export const getUnreadNotificationCount = async () => {
+  try {
+    const userId = await getCurrentUserId();
+    const userRole = await getCurrentUserRole();
+
+    if (!userId || !userRole) {
+      return { success: false, error: true, message: "User not authenticated" };
+    }
+
+    // Get user's specific ID from their role table
+    let userSpecificId: string | null = null;
+    
+    switch (userRole) {
+      case "student":
+        const student = await prisma.student.findFirst({ where: { username: userId } });
+        userSpecificId = student?.id || null;
+        break;
+      case "teacher":
+        const teacher = await prisma.teacher.findFirst({ where: { username: userId } });
+        userSpecificId = teacher?.id || null;
+        break;
+      case "parent":
+        const parent = await prisma.parent.findFirst({ where: { username: userId } });
+        userSpecificId = parent?.id || null;
+        break;
+      case "accountant":
+        const accountant = await prisma.accountant.findFirst({ where: { username: userId } });
+        userSpecificId = accountant?.id || null;
+        break;
+      case "admin":
+        const admin = await prisma.admin.findFirst({ where: { username: userId } });
+        userSpecificId = admin?.id || null;
+        break;
+    }
+
+    // Build the where clause for notifications
+    const whereClause: any = {
+      isRead: false,
+      OR: [
+        // Role-based notifications
+        { targetRole: userRole },
+        // User-specific notifications
+        ...(userSpecificId ? [
+          { studentId: userRole === "student" ? userSpecificId : undefined },
+          { teacherId: userRole === "teacher" ? userSpecificId : undefined },
+          { parentId: userRole === "parent" ? userSpecificId : undefined },
+          { accountantId: userRole === "accountant" ? userSpecificId : undefined },
+          { adminId: userRole === "admin" ? userSpecificId : undefined },
+        ].filter(condition => Object.values(condition).some(value => value !== undefined)) : [])
+      ].filter(Boolean)
+    };
+
+    const count = await prisma.notification.count({
+      where: whereClause
+    });
+
+    return {
+      success: true,
+      error: false,
+      data: { count }
+    };
+  } catch (err: any) {
+    console.error("Error fetching unread notification count:", err);
+    return {
+      success: false,
+      error: true,
+      message: err.message || "Failed to fetch unread notification count",
+    };
+  }
+};
+
+// Send class-specific notification
+export const sendClassNotification = async (data: {
+  title: string;
+  message: string;
+  classId: number;
+  type?: NotificationType;
+  priority?: NotificationPriority;
+}): Promise<CurrentState> => {
+  try {
+    // Verify user is admin
+    const userRole = await getCurrentUserRole();
+    if (userRole !== "admin") {
+      return { success: false, error: true, message: "Only admins can send class notifications" };
+    }
+
+    // Get class supervisor
+    const classData = await prisma.class.findUnique({
+      where: { id: data.classId },
+      select: { supervisorId: true, name: true }
+    });
+
+    if (!classData) {
+      return { success: false, error: true, message: "Class not found" };
+    }
+
+    await createNotification({
+      title: data.title,
+      message: data.message,
+      type: data.type || NotificationType.GENERAL,
+      priority: data.priority || NotificationPriority.NORMAL,
+      targetClassId: data.classId,
+      targetSupervisorId: classData.supervisorId || undefined,
+    });
+
+    return { 
+      success: true, 
+      error: false, 
+      message: `Notification sent to class ${classData.name}` 
+    };
+  } catch (err: any) {
+    console.error("Error sending class notification:", err);
+    return {
+      success: false,
+      error: true,
+      message: err.message || "Failed to send class notification",
+    };
   }
 };

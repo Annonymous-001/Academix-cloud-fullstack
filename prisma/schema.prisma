@@ -10,6 +10,7 @@ datasource db {
 model Admin {
   id       String @id @default(cuid())
   username String @unique
+  notifications Notification[]
 }
 
 model Student {
@@ -36,6 +37,7 @@ model Student {
   results     Result[]
   parent      Parent?        @relation(fields: [parentId], references: [id])
   enrollments Enrollment[]
+  notifications Notification[]
 }
 
 model Enrollment {
@@ -72,6 +74,7 @@ model Teacher {
   lessons     Lesson[]
   attendances TeacherAttendance[]
   subjects    Subject[]           @relation("SubjectToTeacher")
+  notifications Notification[]
 }
 
 model Parent {
@@ -85,6 +88,7 @@ model Parent {
   createdAt DateTime  @default(now())
   parentId  String    @unique
   students  Student[]
+  notifications Notification[]
 }
 
 model Grade {
@@ -108,6 +112,7 @@ model Class {
   lessons       Lesson[]
   students      Enrollment[]
   exams         Exam[]
+  notifications Notification[]
 }
 
 model Subject {
@@ -199,6 +204,7 @@ model Event {
   endTime     DateTime
   classId     Int?
   class       Class?   @relation(fields: [classId], references: [id])
+  notifications Notification[]
 }
 
 model Announcement {
@@ -208,6 +214,7 @@ model Announcement {
   date        DateTime
   classId     Int?
   class       Class?   @relation(fields: [classId], references: [id])
+  notifications Notification[]
 }
 
 model Accountant {
@@ -219,6 +226,7 @@ model Accountant {
   phone     String?  @unique
   address   String
   createdAt DateTime @default(now())
+  notifications Notification[]
 }
 
 model Fee {
@@ -233,6 +241,7 @@ model Fee {
   updatedAt   DateTime  @updatedAt
   student     Student   @relation(fields: [studentId], references: [id])
   payments    Payment[]
+  notifications Notification[]
 }
 
 model Payment {
@@ -255,6 +264,44 @@ model Finance {
   description String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  title       String
+  message     String
+  type        NotificationType
+  priority    NotificationPriority @default(NORMAL)
+  isRead      Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  readAt      DateTime?
+  
+  // Target specific users
+  studentId   String?
+  teacherId   String?
+  parentId    String?
+  accountantId String?
+  adminId     String?
+  
+  // Target by role (for broadcast notifications) - role comes from Clerk public metadata
+  targetRole  String?
+  
+  // Related entities
+  relatedClassId Int?
+  relatedEventId Int?
+  relatedAnnouncementId Int?
+  relatedFeeId Int?
+  
+  // Relations
+  student     Student?     @relation(fields: [studentId], references: [id])
+  teacher     Teacher?     @relation(fields: [teacherId], references: [id])
+  parent      Parent?      @relation(fields: [parentId], references: [id])
+  accountant  Accountant?  @relation(fields: [accountantId], references: [id])
+  admin       Admin?       @relation(fields: [adminId], references: [id])
+  relatedClass Class?      @relation(fields: [relatedClassId], references: [id])
+  relatedEvent Event?      @relation(fields: [relatedEventId], references: [id])
+  relatedAnnouncement Announcement? @relation(fields: [relatedAnnouncementId], references: [id])
+  relatedFee  Fee?         @relation(fields: [relatedFeeId], references: [id])
 }
 
 enum UserSex {
@@ -313,3 +360,25 @@ enum ExpenseType {
   UTILITIES
   OTHER
 }
+
+enum NotificationType {
+  ANNOUNCEMENT
+  EVENT
+  FEE_DUE
+  FEE_PAID
+  ATTENDANCE
+  EXAM
+  ASSIGNMENT
+  RESULT
+  GENERAL
+  SYSTEM
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+

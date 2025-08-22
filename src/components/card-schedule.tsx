@@ -29,7 +29,7 @@ export function CardSchedule({ events, initialDate = new Date() }: CardScheduleP
 
   // Format date for display (AD)
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    return date.toLocaleDateString('en-US', { year: "numeric", month: "short", day: "numeric" });
   }
 
   // Navigate to previous/next period
@@ -68,12 +68,12 @@ export function CardSchedule({ events, initialDate = new Date() }: CardScheduleP
       startOfWeek.setDate(startOfWeek.getDate() - day)
       const endOfWeek = new Date(startOfWeek)
       endOfWeek.setDate(endOfWeek.getDate() + 6)
-      const startStr = startOfWeek.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-      const endStr = endOfWeek.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const startStr = startOfWeek.toLocaleDateString('en-US', { month: "short", day: "numeric" });
+      const endStr = endOfWeek.toLocaleDateString('en-US', { month: "short", day: "numeric" });
       return `${startStr} - ${endStr}`;
     }
     // Month view
-    return currentDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    return currentDate.toLocaleDateString('en-US', { month: "long", year: "numeric" });
   }
 
   // Filter events based on current view

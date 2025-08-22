@@ -11,6 +11,10 @@ const TeacherAttendanceForm = dynamic(() => import("./forms/TeacherattendanceFor
   loading: () => <h1>Loading...</h1>,
 });
 
+const NotificationForm = dynamic(() => import("./forms/NotificationForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+
 const forms: {
   [key: string]: (
     setOpen: Dispatch<SetStateAction<boolean>>,
@@ -24,6 +28,12 @@ const forms: {
       type={type}
       data={data}
       setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  notifications: (setOpen, type, data, relatedData) => (
+    <NotificationForm
+      onClose={() => setOpen(false)}
       relatedData={relatedData}
     />
   ),
@@ -49,6 +59,7 @@ export type FormContainerProps = {
     | "teacherattendance"
     | "accountant"
     | "bulkFee"
+    | "notifications"
   type: "create" | "update" | "delete";
   data?: any;
   id?: number | string;
@@ -96,7 +107,16 @@ export const FormContainer = async ({
           select: { id: true, level: true },
         });
         const studentClasses = await prisma.class.findMany({
-          select: { id: true, name: true },
+          select: { 
+            id: true, 
+            name: true, 
+            capacity: true,
+            _count: {
+              select: {
+                students: true
+              }
+            }
+          },
         });
         relatedData = { classes: studentClasses, grades: studentGrades };
         break;
@@ -238,11 +258,7 @@ export const FormContainer = async ({
       case "fee":
         const feeStudents = await prisma.student.findMany({
           where: {
-            enrollments: {
-              some: {
-                year: 2082
-              }
-            }
+            enrollments: {}
           },
           select: { id: true, name: true, surname: true, StudentId: true },
         });
@@ -366,6 +382,16 @@ export const FormContainer = async ({
           select: { id: true, name: true, surname: true },
         });
         relatedData = { teachers: teacherAttendanceTeachers };
+        break;
+      case "notifications":
+        const notificationClasses = await prisma.class.findMany({
+          select: { 
+            id: true, 
+            name: true,
+            supervisorId: true
+          },
+        });
+        relatedData = { classes: notificationClasses };
         break;
     }
   }

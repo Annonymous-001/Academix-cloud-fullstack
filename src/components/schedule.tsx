@@ -34,13 +34,13 @@ export function Schedule({
   const formatDateRange = (date: Date, viewType: "week" | "day" | "work-week") => {
     const start = new Date(date)
     if (viewType === "day") {
-      return start.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+      return start.toLocaleDateString('en-US', { month: "short", day: "numeric", year: "numeric" });
     }
     const end = new Date(date)
     const daysToAdd = viewType === "work-week" ? 4 : 6
     end.setDate(end.getDate() + daysToAdd)
-    const startStr = start.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    const endStr = end.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const startStr = start.toLocaleDateString('en-US', { month: "short", day: "numeric" });
+    const endStr = end.toLocaleDateString('en-US', { month: "short", day: "numeric" });
     return `${startStr} - ${endStr}`;
   }
 

@@ -48,8 +48,16 @@ export function AgendaSchedule({ events, initialDate = new Date(), daysToShow = 
     const start = new Date(currentDate)
     const end = new Date(currentDate)
     end.setDate(end.getDate() + daysToShow - 1)
-    const startStr = start.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    const endStr = end.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    
+    // Use consistent date formatting to avoid hydration issues
+    const formatDate = (date: Date) => {
+      const day = date.getDate()
+      const month = date.toLocaleDateString('en-US', { month: "short" })
+      return `${day} ${month}`
+    }
+    
+    const startStr = formatDate(start)
+    const endStr = formatDate(end)
     return `${startStr} - ${endStr}`;
   }
 
@@ -68,8 +76,8 @@ export function AgendaSchedule({ events, initialDate = new Date(), daysToShow = 
 
   // Format date for display (AD)
   const formatDate = (date: Date) => {
-    const weekDay = date.toLocaleDateString(undefined, { weekday: "long" });
-    const month = date.toLocaleDateString(undefined, { month: "short" });
+    const weekDay = date.toLocaleDateString('en-US', { weekday: "long" });
+    const month = date.toLocaleDateString('en-US', { month: "short" });
     const day = date.getDate();
     return `${weekDay}, ${month} ${day}`;
   }

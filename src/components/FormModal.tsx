@@ -108,6 +108,9 @@ const AccountantForm = dynamic(() => import("./forms/AccountantForm"), {
 const BulkFeeForm = dynamic(() => import("./forms/BulkFeeForm"), {
   loading: () => <h1>Loading...</h1>,
 });
+const NotificationForm = dynamic(() => import("./forms/NotificationForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
 // TODO: OTHER FORMS
 
 const forms: {
@@ -257,6 +260,12 @@ const forms: {
       classId={relatedData?.classId}
       className={relatedData?.className}
       onSuccess={() => setOpen(false)}
+    />
+  ),
+  notifications: (setOpen, type, data, relatedData) => (
+    <NotificationForm
+      onClose={() => setOpen(false)}
+      relatedData={relatedData}
     />
   ),
 };

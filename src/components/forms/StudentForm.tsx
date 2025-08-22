@@ -352,7 +352,7 @@ const StudentForm = ({
                 }) => (
                   <option value={classItem.id} key={classItem.id}>
                     ({classItem.name} -{" "}
-                    {classItem._count.students + "/" + classItem.capacity}{" "}
+                    {(classItem._count?.students || 0) + "/" + classItem.capacity}{" "}
                     Capacity)
                   </option>
                 )

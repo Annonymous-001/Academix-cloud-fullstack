@@ -5,6 +5,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Analytics } from '@vercel/analytics/next';
+import NotificationProvider from "@/components/NotificationProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -46,7 +47,9 @@ export default function RootLayout({
     >
       <html lang="en">
         <body className={inter.className}>
-          {children}
+          <NotificationProvider>
+            {children}
+          </NotificationProvider>
           <Analytics />
           <ToastContainer
             position="bottom-center"

@@ -55,16 +55,16 @@ const FeeForm = ({
   const router = useRouter();
 
   useEffect(() => {
-    if (state.success) {
+    if (state?.success) {
       toast.success(`Fee has been ${type === "create" ? "created" : "updated"}!`);
       setOpen(false);
       router.refresh();
     }
-    if (state.error) {
+    if (state?.error) {
       setShowError(true);
       toast.error(state.message || "Something went wrong!");
     }
-    if (state.success || state.error) {
+    if (state?.success || state?.error) {
       setLoading(false);
     }
   }, [state, router, type, setOpen]);
